@@ -4,147 +4,80 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
-import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
-import javax.validation.constraints.NotEmpty;
-import javax.validation.constraints.NotNull;
-import javax.validation.constraints.Pattern;
-import java.math.BigDecimal;
-import java.util.Collections;
-import java.util.List;
+import java.util.Objects;
 
 import static org.junit.jupiter.api.Assertions.*;
 
 @ExtendWith(MockitoExtension.class)
-public class CreditFacilityDTOTest {
+public class LPDEventTest {
 
     @InjectMocks
-    private CreditFacilityDTO creditFacilityDTO;
-
-    @Mock
-    private ExposuresDTO exposuresDTO;
+    private LPDEvent lpdEvent;
 
     @BeforeEach
     void setUp() {
-        creditFacilityDTO = new CreditFacilityDTO();
-        creditFacilityDTO.setExposures(Collections.singletonList(exposuresDTO));
-        creditFacilityDTO.setCreditFacilityIdentifier("CF123");
-        creditFacilityDTO.setParentCreditFacility("PCF123");
-        creditFacilityDTO.setOriginalLifetimePD(new BigDecimal("123456789012345678.12345678"));
-        creditFacilityDTO.setResidualLifetimePD(new BigDecimal("876543210987654321.87654321"));
-        creditFacilityDTO.setFinalClientSegmentLEL("SegmentLEL");
-        creditFacilityDTO.setLpdDeterioration("Y");
-        creditFacilityDTO.setCreditFacilityLevel("Level1");
+        lpdEvent = new LPDEvent();
+        lpdEvent.setSubjectId("subject123");
+        lpdEvent.setSubjectContext("context123");
+        lpdEvent.setEventCode("event123");
     }
 
     @Test
-    void testGetExposures() {
-        assertEquals(1, creditFacilityDTO.getExposures().size());
+    void testGetSubjectId() {
+        assertEquals("subject123", lpdEvent.getSubjectId());
     }
 
     @Test
-    void testSetExposures() {
-        creditFacilityDTO.setExposures(Collections.emptyList());
-        assertTrue(creditFacilityDTO.getExposures().isEmpty());
+    void testSetSubjectId() {
+        lpdEvent.setSubjectId("subject456");
+        assertEquals("subject456", lpdEvent.getSubjectId());
     }
 
     @Test
-    void testGetCreditFacilityIdentifier() {
-        assertEquals("CF123", creditFacilityDTO.getCreditFacilityIdentifier());
+    void testGetSubjectContext() {
+        assertEquals("context123", lpdEvent.getSubjectContext());
     }
 
     @Test
-    void testSetCreditFacilityIdentifier() {
-        creditFacilityDTO.setCreditFacilityIdentifier("CF456");
-        assertEquals("CF456", creditFacilityDTO.getCreditFacilityIdentifier());
+    void testSetSubjectContext() {
+        lpdEvent.setSubjectContext("context456");
+        assertEquals("context456", lpdEvent.getSubjectContext());
     }
 
     @Test
-    void testGetParentCreditFacility() {
-        assertEquals("PCF123", creditFacilityDTO.getParentCreditFacility());
+    void testGetEventCode() {
+        assertEquals("event123", lpdEvent.getEventCode());
     }
 
     @Test
-    void testSetParentCreditFacility() {
-        creditFacilityDTO.setParentCreditFacility("PCF456");
-        assertEquals("PCF456", creditFacilityDTO.getParentCreditFacility());
+    void testSetEventCode() {
+        lpdEvent.setEventCode("event456");
+        assertEquals("event456", lpdEvent.getEventCode());
     }
 
     @Test
-    void testGetOriginalLifetimePD() {
-        assertEquals(new BigDecimal("123456789012345678.12345678"), creditFacilityDTO.getOriginalLifetimePD());
+    void testEquals() {
+        LPDEvent anotherEvent = new LPDEvent();
+        anotherEvent.setSubjectId("subject123");
+        anotherEvent.setSubjectContext("context123");
+        anotherEvent.setEventCode("event123");
+
+        assertTrue(lpdEvent.equals(anotherEvent));
+        assertFalse(lpdEvent.equals(null));
+        assertFalse(lpdEvent.equals(new Object()));
     }
 
     @Test
-    void testSetOriginalLifetimePD() {
-        creditFacilityDTO.setOriginalLifetimePD(new BigDecimal("987654321098765432.87654321"));
-        assertEquals(new BigDecimal("987654321098765432.87654321"), creditFacilityDTO.getOriginalLifetimePD());
-    }
-
-    @Test
-    void testGetResidualLifetimePD() {
-        assertEquals(new BigDecimal("876543210987654321.87654321"), creditFacilityDTO.getResidualLifetimePD());
-    }
-
-    @Test
-    void testSetResidualLifetimePD() {
-        creditFacilityDTO.setResidualLifetimePD(new BigDecimal("123456789012345678.12345678"));
-        assertEquals(new BigDecimal("123456789012345678.12345678"), creditFacilityDTO.getResidualLifetimePD());
-    }
-
-    @Test
-    void testGetFinalClientSegmentLEL() {
-        assertEquals("SegmentLEL", creditFacilityDTO.getFinalClientSegmentLEL());
-    }
-
-    @Test
-    void testSetFinalClientSegmentLEL() {
-        creditFacilityDTO.setFinalClientSegmentLEL("NewSegmentLEL");
-        assertEquals("NewSegmentLEL", creditFacilityDTO.getFinalClientSegmentLEL());
-    }
-
-    @Test
-    void testGetLpdDeterioration() {
-        assertEquals("Y", creditFacilityDTO.getLpdDeterioration());
-    }
-
-    @Test
-    void testSetLpdDeterioration() {
-        creditFacilityDTO.setLpdDeterioration("N");
-        assertEquals("N", creditFacilityDTO.getLpdDeterioration());
-    }
-
-    @Test
-    void testGetCreditFacilityLevel() {
-        assertEquals("Level1", creditFacilityDTO.getCreditFacilityLevel());
-    }
-
-    @Test
-    void testSetCreditFacilityLevel() {
-        creditFacilityDTO.setCreditFacilityLevel("Level2");
-        assertEquals("Level2", creditFacilityDTO.getCreditFacilityLevel());
-    }
-
-    @Test
-    void testEqualsAndHashCode() {
-        CreditFacilityDTO anotherDTO = new CreditFacilityDTO();
-        anotherDTO.setExposures(Collections.singletonList(exposuresDTO));
-        anotherDTO.setCreditFacilityIdentifier("CF123");
-        anotherDTO.setParentCreditFacility("PCF123");
-        anotherDTO.setOriginalLifetimePD(new BigDecimal("123456789012345678.12345678"));
-        anotherDTO.setResidualLifetimePD(new BigDecimal("876543210987654321.87654321"));
-        anotherDTO.setFinalClientSegmentLEL("SegmentLEL");
-        anotherDTO.setLpdDeterioration("Y");
-        anotherDTO.setCreditFacilityLevel("Level1");
-
-        assertEquals(creditFacilityDTO, anotherDTO);
-        assertEquals(creditFacilityDTO.hashCode(), anotherDTO.hashCode());
+    void testHashCode() {
+        int expectedHashCode = Objects.hash("subject123", "event123", "context123");
+        assertEquals(expectedHashCode, lpdEvent.hashCode());
     }
 
     @Test
     void testToString() {
-        String expected = "CreditFacilityDTO(exposures=[exposuresDTO], creditFacilityIdentifier=CF123, parentCreditFacility=PCF123, originalLifetimePD=123456789012345678.12345678, residualLifetimePD=876543210987654321.87654321, finalClientSegmentLEL=SegmentLEL, lpdDeterioration=Y, creditFacilityLevel=Level1)";
-        assertEquals(expected, creditFacilityDTO.toString());
+        String expected = "LPDEvent(subjectId=subject123, subjectContext=context123, eventCode=event123)";
+        assertEquals(expected, lpdEvent.toString());
     }
 }
