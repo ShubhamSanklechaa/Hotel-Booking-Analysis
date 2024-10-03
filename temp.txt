@@ -1,40 +1,65 @@
 import static org.junit.jupiter.api.Assertions.*;
 import org.junit.jupiter.api.Test;
+import com.fasterxml.jackson.annotation.JsonProperty;
 
-class ExposuresDTOTest {
+class CurrentAccountDTOTest {
 
     @Test
     void testGettersAndSetters() {
-        ExposuresDTO exposuresDTO = new ExposuresDTO();
-        exposuresDTO.setGlobalFacilityId("12345");
+        CurrentAccountDTO currentAccountDTO = new CurrentAccountDTO();
+        ExposuresDTO exposure = new ExposuresDTO();
+        exposure.setGlobalFacilityId("12345");
 
-        assertEquals("12345", exposuresDTO.getGlobalFacilityId());
+        currentAccountDTO.setArrangementIdentifier("arr123");
+        currentAccountDTO.setCreditFacility("credit123");
+        currentAccountDTO.setExposure(exposure);
+
+        assertEquals("arr123", currentAccountDTO.getArrangementIdentifier());
+        assertEquals("credit123", currentAccountDTO.getCreditFacility());
+        assertEquals(exposure, currentAccountDTO.getExposure());
     }
 
     @Test
     void testNotNull() {
-        ExposuresDTO exposuresDTO = new ExposuresDTO();
-        exposuresDTO.setGlobalFacilityId("12345");
+        CurrentAccountDTO currentAccountDTO = new CurrentAccountDTO();
+        currentAccountDTO.setArrangementIdentifier("arr123");
+        currentAccountDTO.setCreditFacility("credit123");
+        currentAccountDTO.setExposure(new ExposuresDTO());
 
-        assertNotNull(exposuresDTO.getGlobalFacilityId());
+        assertNotNull(currentAccountDTO.getArrangementIdentifier());
+        assertNotNull(currentAccountDTO.getCreditFacility());
+        assertNotNull(currentAccountDTO.getExposure());
     }
 
     @Test
     void testToString() {
-        ExposuresDTO exposuresDTO = new ExposuresDTO();
-        exposuresDTO.setGlobalFacilityId("12345");
+        CurrentAccountDTO currentAccountDTO = new CurrentAccountDTO();
+        ExposuresDTO exposure = new ExposuresDTO();
+        exposure.setGlobalFacilityId("12345");
 
-        String expected = "ExposuresDTO(globalFacilityId=12345)";
-        assertEquals(expected, exposuresDTO.toString());
+        currentAccountDTO.setArrangementIdentifier("arr123");
+        currentAccountDTO.setCreditFacility("credit123");
+        currentAccountDTO.setExposure(exposure);
+
+        String expected = "CurrentAccountDTO(arrangementIdentifier=arr123, creditFacility=credit123, exposure=ExposuresDTO(globalFacilityId=12345))";
+        assertEquals(expected, currentAccountDTO.toString());
     }
 
     @Test
     void testEqualsAndHashCode() {
-        ExposuresDTO dto1 = new ExposuresDTO();
-        dto1.setGlobalFacilityId("12345");
+        CurrentAccountDTO dto1 = new CurrentAccountDTO();
+        ExposuresDTO exposure1 = new ExposuresDTO();
+        exposure1.setGlobalFacilityId("12345");
+        dto1.setArrangementIdentifier("arr123");
+        dto1.setCreditFacility("credit123");
+        dto1.setExposure(exposure1);
 
-        ExposuresDTO dto2 = new ExposuresDTO();
-        dto2.setGlobalFacilityId("12345");
+        CurrentAccountDTO dto2 = new CurrentAccountDTO();
+        ExposuresDTO exposure2 = new ExposuresDTO();
+        exposure2.setGlobalFacilityId("12345");
+        dto2.setArrangementIdentifier("arr123");
+        dto2.setCreditFacility("credit123");
+        dto2.setExposure(exposure2);
 
         assertEquals(dto1, dto2);
         assertEquals(dto1.hashCode(), dto2.hashCode());
