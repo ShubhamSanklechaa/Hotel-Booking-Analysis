@@ -7,77 +7,144 @@ import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
+import javax.validation.constraints.NotEmpty;
+import javax.validation.constraints.NotNull;
+import javax.validation.constraints.Pattern;
+import java.math.BigDecimal;
 import java.util.Collections;
+import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.*;
 
 @ExtendWith(MockitoExtension.class)
-public class LPDRiskSignalDTOTest {
+public class CreditFacilityDTOTest {
 
     @InjectMocks
-    private LPDRiskSignalDTO lpdRiskSignalDTO;
-
-    @Mock
     private CreditFacilityDTO creditFacilityDTO;
 
     @Mock
-    private CurrentAccountDTO currentAccountDTO;
+    private ExposuresDTO exposuresDTO;
 
     @BeforeEach
     void setUp() {
-        lpdRiskSignalDTO = new LPDRiskSignalDTO();
-        lpdRiskSignalDTO.setCounterpartyIdentifier("12345");
-        lpdRiskSignalDTO.setCreditFacilities(Collections.singletonList(creditFacilityDTO));
-        lpdRiskSignalDTO.setCurrentAccounts(Collections.singletonList(currentAccountDTO));
+        creditFacilityDTO = new CreditFacilityDTO();
+        creditFacilityDTO.setExposures(Collections.singletonList(exposuresDTO));
+        creditFacilityDTO.setCreditFacilityIdentifier("CF123");
+        creditFacilityDTO.setParentCreditFacility("PCF123");
+        creditFacilityDTO.setOriginalLifetimePD(new BigDecimal("123456789012345678.12345678"));
+        creditFacilityDTO.setResidualLifetimePD(new BigDecimal("876543210987654321.87654321"));
+        creditFacilityDTO.setFinalClientSegmentLEL("SegmentLEL");
+        creditFacilityDTO.setLpdDeterioration("Y");
+        creditFacilityDTO.setCreditFacilityLevel("Level1");
     }
 
     @Test
-    void testGetCounterpartyIdentifier() {
-        assertEquals("12345", lpdRiskSignalDTO.getCounterpartyIdentifier());
+    void testGetExposures() {
+        assertEquals(1, creditFacilityDTO.getExposures().size());
     }
 
     @Test
-    void testSetCounterpartyIdentifier() {
-        lpdRiskSignalDTO.setCounterpartyIdentifier("54321");
-        assertEquals("54321", lpdRiskSignalDTO.getCounterpartyIdentifier());
+    void testSetExposures() {
+        creditFacilityDTO.setExposures(Collections.emptyList());
+        assertTrue(creditFacilityDTO.getExposures().isEmpty());
     }
 
     @Test
-    void testGetCreditFacilities() {
-        assertEquals(1, lpdRiskSignalDTO.getCreditFacilities().size());
+    void testGetCreditFacilityIdentifier() {
+        assertEquals("CF123", creditFacilityDTO.getCreditFacilityIdentifier());
     }
 
     @Test
-    void testSetCreditFacilities() {
-        lpdRiskSignalDTO.setCreditFacilities(Collections.emptyList());
-        assertTrue(lpdRiskSignalDTO.getCreditFacilities().isEmpty());
+    void testSetCreditFacilityIdentifier() {
+        creditFacilityDTO.setCreditFacilityIdentifier("CF456");
+        assertEquals("CF456", creditFacilityDTO.getCreditFacilityIdentifier());
     }
 
     @Test
-    void testGetCurrentAccounts() {
-        assertEquals(1, lpdRiskSignalDTO.getCurrentAccounts().size());
+    void testGetParentCreditFacility() {
+        assertEquals("PCF123", creditFacilityDTO.getParentCreditFacility());
     }
 
     @Test
-    void testSetCurrentAccounts() {
-        lpdRiskSignalDTO.setCurrentAccounts(Collections.emptyList());
-        assertTrue(lpdRiskSignalDTO.getCurrentAccounts().isEmpty());
+    void testSetParentCreditFacility() {
+        creditFacilityDTO.setParentCreditFacility("PCF456");
+        assertEquals("PCF456", creditFacilityDTO.getParentCreditFacility());
+    }
+
+    @Test
+    void testGetOriginalLifetimePD() {
+        assertEquals(new BigDecimal("123456789012345678.12345678"), creditFacilityDTO.getOriginalLifetimePD());
+    }
+
+    @Test
+    void testSetOriginalLifetimePD() {
+        creditFacilityDTO.setOriginalLifetimePD(new BigDecimal("987654321098765432.87654321"));
+        assertEquals(new BigDecimal("987654321098765432.87654321"), creditFacilityDTO.getOriginalLifetimePD());
+    }
+
+    @Test
+    void testGetResidualLifetimePD() {
+        assertEquals(new BigDecimal("876543210987654321.87654321"), creditFacilityDTO.getResidualLifetimePD());
+    }
+
+    @Test
+    void testSetResidualLifetimePD() {
+        creditFacilityDTO.setResidualLifetimePD(new BigDecimal("123456789012345678.12345678"));
+        assertEquals(new BigDecimal("123456789012345678.12345678"), creditFacilityDTO.getResidualLifetimePD());
+    }
+
+    @Test
+    void testGetFinalClientSegmentLEL() {
+        assertEquals("SegmentLEL", creditFacilityDTO.getFinalClientSegmentLEL());
+    }
+
+    @Test
+    void testSetFinalClientSegmentLEL() {
+        creditFacilityDTO.setFinalClientSegmentLEL("NewSegmentLEL");
+        assertEquals("NewSegmentLEL", creditFacilityDTO.getFinalClientSegmentLEL());
+    }
+
+    @Test
+    void testGetLpdDeterioration() {
+        assertEquals("Y", creditFacilityDTO.getLpdDeterioration());
+    }
+
+    @Test
+    void testSetLpdDeterioration() {
+        creditFacilityDTO.setLpdDeterioration("N");
+        assertEquals("N", creditFacilityDTO.getLpdDeterioration());
+    }
+
+    @Test
+    void testGetCreditFacilityLevel() {
+        assertEquals("Level1", creditFacilityDTO.getCreditFacilityLevel());
+    }
+
+    @Test
+    void testSetCreditFacilityLevel() {
+        creditFacilityDTO.setCreditFacilityLevel("Level2");
+        assertEquals("Level2", creditFacilityDTO.getCreditFacilityLevel());
     }
 
     @Test
     void testEqualsAndHashCode() {
-        LPDRiskSignalDTO anotherDTO = new LPDRiskSignalDTO();
-        anotherDTO.setCounterpartyIdentifier("12345");
-        anotherDTO.setCreditFacilities(Collections.singletonList(creditFacilityDTO));
-        anotherDTO.setCurrentAccounts(Collections.singletonList(currentAccountDTO));
+        CreditFacilityDTO anotherDTO = new CreditFacilityDTO();
+        anotherDTO.setExposures(Collections.singletonList(exposuresDTO));
+        anotherDTO.setCreditFacilityIdentifier("CF123");
+        anotherDTO.setParentCreditFacility("PCF123");
+        anotherDTO.setOriginalLifetimePD(new BigDecimal("123456789012345678.12345678"));
+        anotherDTO.setResidualLifetimePD(new BigDecimal("876543210987654321.87654321"));
+        anotherDTO.setFinalClientSegmentLEL("SegmentLEL");
+        anotherDTO.setLpdDeterioration("Y");
+        anotherDTO.setCreditFacilityLevel("Level1");
 
-        assertEquals(lpdRiskSignalDTO, anotherDTO);
-        assertEquals(lpdRiskSignalDTO.hashCode(), anotherDTO.hashCode());
+        assertEquals(creditFacilityDTO, anotherDTO);
+        assertEquals(creditFacilityDTO.hashCode(), anotherDTO.hashCode());
     }
 
     @Test
     void testToString() {
-        String expected = "LPDRiskSignalDTO(counterpartyIdentifier=12345, creditFacilities=[creditFacilityDTO], currentAccounts=[currentAccountDTO])";
-        assertEquals(expected, lpdRiskSignalDTO.toString());
+        String expected = "CreditFacilityDTO(exposures=[exposuresDTO], creditFacilityIdentifier=CF123, parentCreditFacility=PCF123, originalLifetimePD=123456789012345678.12345678, residualLifetimePD=876543210987654321.87654321, finalClientSegmentLEL=SegmentLEL, lpdDeterioration=Y, creditFacilityLevel=Level1)";
+        assertEquals(expected, creditFacilityDTO.toString());
     }
 }
