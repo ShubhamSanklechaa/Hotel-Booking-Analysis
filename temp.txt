@@ -1,83 +1,41 @@
-package com.abnamro.crms.lpdrisksignaladministration.dto;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
 
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.junit.jupiter.MockitoExtension;
-
-import java.util.Objects;
-
-import static org.junit.jupiter.api.Assertions.*;
+import org.junit.jupiter.api.extension.ExtendWith;
 
 @ExtendWith(MockitoExtension.class)
-public class LPDEventTest {
+public class CurrentAccountDTOTest {
 
     @InjectMocks
-    private LPDEvent lpdEvent;
+    private CurrentAccountDTO currentAccountDTO;
 
     @BeforeEach
     void setUp() {
-        lpdEvent = new LPDEvent();
-        lpdEvent.setSubjectId("subject123");
-        lpdEvent.setSubjectContext("context123");
-        lpdEvent.setEventCode("event123");
+        currentAccountDTO = new CurrentAccountDTO();
     }
 
     @Test
-    void testGetSubjectId() {
-        assertEquals("subject123", lpdEvent.getSubjectId());
+    void testArrangementIdentifier() {
+        String arrangementIdentifier = "12345";
+        currentAccountDTO.setArrangementIdentifier(arrangementIdentifier);
+        assertEquals(arrangementIdentifier, currentAccountDTO.getArrangementIdentifier());
     }
 
     @Test
-    void testSetSubjectId() {
-        lpdEvent.setSubjectId("subject456");
-        assertEquals("subject456", lpdEvent.getSubjectId());
+    void testCreditFacility() {
+        String creditFacility = "Credit Facility";
+        currentAccountDTO.setCreditFacility(creditFacility);
+        assertEquals(creditFacility, currentAccountDTO.getCreditFacility());
     }
 
     @Test
-    void testGetSubjectContext() {
-        assertEquals("context123", lpdEvent.getSubjectContext());
-    }
-
-    @Test
-    void testSetSubjectContext() {
-        lpdEvent.setSubjectContext("context456");
-        assertEquals("context456", lpdEvent.getSubjectContext());
-    }
-
-    @Test
-    void testGetEventCode() {
-        assertEquals("event123", lpdEvent.getEventCode());
-    }
-
-    @Test
-    void testSetEventCode() {
-        lpdEvent.setEventCode("event456");
-        assertEquals("event456", lpdEvent.getEventCode());
-    }
-
-    @Test
-    void testEquals() {
-        LPDEvent anotherEvent = new LPDEvent();
-        anotherEvent.setSubjectId("subject123");
-        anotherEvent.setSubjectContext("context123");
-        anotherEvent.setEventCode("event123");
-
-        assertTrue(lpdEvent.equals(anotherEvent));
-        assertFalse(lpdEvent.equals(null));
-        assertFalse(lpdEvent.equals(new Object()));
-    }
-
-    @Test
-    void testHashCode() {
-        int expectedHashCode = Objects.hash("subject123", "event123", "context123");
-        assertEquals(expectedHashCode, lpdEvent.hashCode());
-    }
-
-    @Test
-    void testToString() {
-        String expected = "LPDEvent(subjectId=subject123, subjectContext=context123, eventCode=event123)";
-        assertEquals(expected, lpdEvent.toString());
+    void testExposure() {
+        ExposuresDTO exposure = new ExposuresDTO();
+        currentAccountDTO.setExposure(exposure);
+        assertNotNull(currentAccountDTO.getExposure());
     }
 }
