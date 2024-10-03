@@ -9,8 +9,7 @@ import org.mockito.junit.jupiter.MockitoExtension;
 
 import java.util.Collections;
 
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.mockito.Mockito.when;
+import static org.junit.jupiter.api.Assertions.*;
 
 @ExtendWith(MockitoExtension.class)
 public class LPDRiskSignalDTOTest {
@@ -38,12 +37,47 @@ public class LPDRiskSignalDTOTest {
     }
 
     @Test
+    void testSetCounterpartyIdentifier() {
+        lpdRiskSignalDTO.setCounterpartyIdentifier("54321");
+        assertEquals("54321", lpdRiskSignalDTO.getCounterpartyIdentifier());
+    }
+
+    @Test
     void testGetCreditFacilities() {
         assertEquals(1, lpdRiskSignalDTO.getCreditFacilities().size());
     }
 
     @Test
+    void testSetCreditFacilities() {
+        lpdRiskSignalDTO.setCreditFacilities(Collections.emptyList());
+        assertTrue(lpdRiskSignalDTO.getCreditFacilities().isEmpty());
+    }
+
+    @Test
     void testGetCurrentAccounts() {
         assertEquals(1, lpdRiskSignalDTO.getCurrentAccounts().size());
+    }
+
+    @Test
+    void testSetCurrentAccounts() {
+        lpdRiskSignalDTO.setCurrentAccounts(Collections.emptyList());
+        assertTrue(lpdRiskSignalDTO.getCurrentAccounts().isEmpty());
+    }
+
+    @Test
+    void testEqualsAndHashCode() {
+        LPDRiskSignalDTO anotherDTO = new LPDRiskSignalDTO();
+        anotherDTO.setCounterpartyIdentifier("12345");
+        anotherDTO.setCreditFacilities(Collections.singletonList(creditFacilityDTO));
+        anotherDTO.setCurrentAccounts(Collections.singletonList(currentAccountDTO));
+
+        assertEquals(lpdRiskSignalDTO, anotherDTO);
+        assertEquals(lpdRiskSignalDTO.hashCode(), anotherDTO.hashCode());
+    }
+
+    @Test
+    void testToString() {
+        String expected = "LPDRiskSignalDTO(counterpartyIdentifier=12345, creditFacilities=[creditFacilityDTO], currentAccounts=[currentAccountDTO])";
+        assertEquals(expected, lpdRiskSignalDTO.toString());
     }
 }
