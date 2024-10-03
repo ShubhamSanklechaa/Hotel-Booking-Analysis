@@ -38,4 +38,18 @@ public class CurrentAccountDTOTest {
         currentAccountDTO.setExposure(exposure);
         assertNotNull(currentAccountDTO.getExposure());
     }
+
+    @Test
+    void testAllArgsConstructor() {
+        CurrentAccountDTO dto = new CurrentAccountDTO("12345", "Credit Facility", new ExposuresDTO());
+        assertEquals("12345", dto.getArrangementIdentifier());
+        assertEquals("Credit Facility", dto.getCreditFacility());
+        assertNotNull(dto.getExposure());
+    }
+
+    @Test
+    void testNoArgsConstructor() {
+        CurrentAccountDTO dto = new CurrentAccountDTO();
+        assertNotNull(dto);
+    }
 }
