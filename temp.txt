@@ -1,55 +1,17 @@
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertNotNull;
-
-import org.junit.jupiter.api.BeforeEach;
+import static org.junit.jupiter.api.Assertions.*;
 import org.junit.jupiter.api.Test;
-import org.mockito.InjectMocks;
-import org.mockito.junit.jupiter.MockitoExtension;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.junit.jupiter.MockitoExtension;
 
 @ExtendWith(MockitoExtension.class)
-public class CurrentAccountDTOTest {
-
-    @InjectMocks
-    private CurrentAccountDTO currentAccountDTO;
-
-    @BeforeEach
-    void setUp() {
-        currentAccountDTO = new CurrentAccountDTO();
-    }
+class ExposuresDTOTest {
 
     @Test
-    void testArrangementIdentifier() {
-        String arrangementIdentifier = "12345";
-        currentAccountDTO.setArrangementIdentifier(arrangementIdentifier);
-        assertEquals(arrangementIdentifier, currentAccountDTO.getArrangementIdentifier());
-    }
+    void testExposuresDTO() {
+        ExposuresDTO exposuresDTO = new ExposuresDTO();
+        exposuresDTO.setGlobalFacilityId("12345");
 
-    @Test
-    void testCreditFacility() {
-        String creditFacility = "Credit Facility";
-        currentAccountDTO.setCreditFacility(creditFacility);
-        assertEquals(creditFacility, currentAccountDTO.getCreditFacility());
-    }
-
-    @Test
-    void testExposure() {
-        ExposuresDTO exposure = new ExposuresDTO();
-        currentAccountDTO.setExposure(exposure);
-        assertNotNull(currentAccountDTO.getExposure());
-    }
-
-    @Test
-    void testAllArgsConstructor() {
-        CurrentAccountDTO dto = new CurrentAccountDTO("12345", "Credit Facility", new ExposuresDTO());
-        assertEquals("12345", dto.getArrangementIdentifier());
-        assertEquals("Credit Facility", dto.getCreditFacility());
-        assertNotNull(dto.getExposure());
-    }
-
-    @Test
-    void testNoArgsConstructor() {
-        CurrentAccountDTO dto = new CurrentAccountDTO();
-        assertNotNull(dto);
+        assertNotNull(exposuresDTO.getGlobalFacilityId());
+        assertEquals("12345", exposuresDTO.getGlobalFacilityId());
     }
 }
