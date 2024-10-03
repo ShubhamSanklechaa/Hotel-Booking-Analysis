@@ -1,1 +1,52 @@
-hello
+package com.abnamro.crms.lpdrisksignaladministration.dto;
+
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.mockito.InjectMocks;
+import org.mockito.MockitoAnnotations;
+import static org.junit.jupiter.api.Assertions.*;
+
+import java.math.BigDecimal;
+import java.util.Collections;
+
+class CreditFacilityDTOTest {
+
+    @InjectMocks
+    private CreditFacilityDTO creditFacilityDTO;
+
+    @BeforeEach
+    void setUp() {
+        MockitoAnnotations.openMocks(this);
+        creditFacilityDTO = new CreditFacilityDTO();
+    }
+
+    @Test
+    void testGettersAndSetters() {
+        // Setting up sample data
+        ExposuresDTO exposuresDTO = new ExposuresDTO();  // Assuming you have this class defined
+        creditFacilityDTO.setExposures(Collections.singletonList(exposuresDTO));
+        creditFacilityDTO.setCreditFacilityIdentifier("12345");
+        creditFacilityDTO.setParentCreditFacility("67890");
+        creditFacilityDTO.setOriginalLifetimePD(BigDecimal.valueOf(123456789.12345678));
+        creditFacilityDTO.setResidualLifetimePD(BigDecimal.valueOf(987654321.87654321));
+        creditFacilityDTO.setFinalClientSegmentLEL("LEL123");
+        creditFacilityDTO.setPdDeterioration("Y");
+        creditFacilityDTO.setCreditFacilityLevel("Level1");
+
+        // Assertions
+        assertEquals(1, creditFacilityDTO.getExposures().size());
+        assertEquals("12345", creditFacilityDTO.getCreditFacilityIdentifier());
+        assertEquals("67890", creditFacilityDTO.getParentCreditFacility());
+        assertEquals(BigDecimal.valueOf(123456789.12345678), creditFacilityDTO.getOriginalLifetimePD());
+        assertEquals(BigDecimal.valueOf(987654321.87654321), creditFacilityDTO.getResidualLifetimePD());
+        assertEquals("LEL123", creditFacilityDTO.getFinalClientSegmentLEL());
+        assertEquals("Y", creditFacilityDTO.getPdDeterioration());
+        assertEquals("Level1", creditFacilityDTO.getCreditFacilityLevel());
+    }
+
+    @Test
+    void testValidationAnnotations() {
+        // Example of testing validation logic (you'd need a validator if testing with a framework like Hibernate)
+        assertNotNull(creditFacilityDTO.getOriginalLifetimePD(), "Original Lifetime PD should not be null");
+    }
+}
