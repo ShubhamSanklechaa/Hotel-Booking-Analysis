@@ -1,14 +1,12 @@
-To achieve this, you can create a CreditFacilityTypeDAO class to execute the query and check if the facility is of type NPL. After that, you can use this condition in your LPDMessageForSignalUtil class to proceed only if the facility is NPL.
+The warning you're seeing indicates that the queryForObject(String, Object[], Class<Integer>) method from JdbcTemplate is deprecated. You should update the method to use the recommended alternative, which is queryForObject(String, Object[], RowMapper) or queryForObject(String, SqlParameterSource, Class).
 
-Here's how you can structure the CreditFacilityTypeDAO class:
+Here’s how you can modify the method using RowMapper to avoid the deprecation warning:
 
-CreditFacilityTypeDAO.java
+Updated CreditFacilityTypeDAO.java:
 
-package com.abnamro.crms.1pdrisksignaladministration.dao;
-
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.jdbc.core.JdbcTemplate;
-import org.springframework.stereotype.Repository;
+import org.springframework.jdbc.core.RowMapper;
+import java.sql.ResultSet;
+import java.sql.SQLException;
 
 @Repository
 public class CreditFacilityTypeDAO {
@@ -18,60 +16,22 @@ public class CreditFacilityTypeDAO {
 
     public boolean isNPLFacility(String facilityId) {
         String query = "SELECT 1 FROM CREDIT_FACILITY WHERE FACILITY_ID = ? AND RISK_MANAGEMENT_TYPE = 'NPL'";
-        Integer result = jdbcTemplate.queryForObject(query, new Object[]{facilityId}, Integer.class);
+        Integer result = jdbcTemplate.queryForObject(query, new Object[]{facilityId}, new RowMapper<Integer>() {
+            @Override
+            public Integer mapRow(ResultSet rs, int rowNum) throws SQLException {
+                return rs.getInt(1);
+            }
+        });
         return result != null && result == 1;
     }
 }
 
-Modification in LPDMessageForSignalUtil.java
+Key Changes:
 
-In your existing class, inject the CreditFacilityTypeDAO and modify the generateJsonForSignalMessage method to add this condition after your initial if statement.
+I replaced the deprecated method with jdbcTemplate.queryForObject(query, Object[], RowMapper<Integer>).
 
-@Autowired
-private CreditFacilityTypeDAO creditFacilityTypeDAO;
+The RowMapper implementation is used to map the result set, returning the required integer value.
 
-public void generateJsonForSignalMessage(LPDRiskSignal lpdRiskSignalNew, LPDRiskSignal lpdOldRiskSignal) 
-        throws LPDException, JsonProcessingException, InterruptedException {
-    
-    // Check if the facility is of type NPL
-    boolean isNPL = creditFacilityTypeDAO.isNPLFacility(lpdRiskSignalNew.getSubjectId());
-    
-    if ((lpdOldRiskSignal != null && 
-         lpdRiskSignalNew.getDetrorationFlag().equalsIgnoreCase(lpdOldRiskSignal.getDetrorationFlag()))
-        || "Y".equalsIgnoreCase(lpdRiskSignalNew.getDetrorationFlag())) {
-        
-        if (isNPL) {
-            CRMSEventPublisherDTO crmsEventPublisherDTO = new CRMSEventPublisherDTO();
-            LPDRiskSignalTriggerDetails eventLPDRiskSignalChangesDetails = new LPDRiskSignalTriggerDetails();
-            SubjectContext subjectContext = new SubjectContext();
-            
-            subjectContext.setCreditFacilityAgreementId(lpdRiskSignalNew.getSubjectId());
-            crmsEventPublisherDTO.setType(LPDRiskSignalConstants.EVENT_TYPE);
-            crmsEventPublisherDTO.setSubmittedDateTime(OffsetDateTime.now().toString());
-            crmsEventPublisherDTO.setPublisherId(LPDRiskSignalConstants.EVENT_PUBLISHER_ID);
-            
-            eventLPDRiskSignalChangesDetails.setSignalId(lpdRiskSignalNew.getSignalIdentifier().toString());
-            eventLPDRiskSignalChangesDetails.setOriginalLPD(lpdRiskSignalNew.getOriginalLifetimePD().doubleValue());
-            eventLPDRiskSignalChangesDetails.setResidualLPD(lpdRiskSignalNew.getResidualLifetimePD().doubleValue());
-            eventLPDRiskSignalChangesDetails.setDeteriorationFlag(lpdRiskSignalNew.getDetrorationFlag());
-            eventLPDRiskSignalChangesDetails.setAdministrationStatus(lpdRiskSignalNew.getAdministrationStatus());
-            eventLPDRiskSignalChangesDetails.setLpdVersion(lpdRiskSignalNew.getLpdVersion().toString());
-            
-            crmsEventPublisherDTO.setSubjectContext(subjectContext);
-            crmsEventPublisherDTO.setEventLPDRiskSignalChangesDetails(eventLPDRiskSignalChangesDetails);
-            
-            ObjectMapper obj = new ObjectMapper();
-            String signalMessage = obj.writeValueAsString(crmsEventPublisherDTO);
-            log.info("Message Generated: " + signalMessage);
-            
-            // Send message to trigger queue
-            senderClient.sendMessage(new ServiceBusMessage(signalMessage));
-            log.info("Message sent successfully to trigger queue.");
-        } else {
-            log.info("Facility is not of type NPL, skipping message generation.");
-        }
-    }
-}
 
-This will ensure that the message is generated and sent only if the facility is of type NPL. Otherwise, the method will log and skip the process.
+This way, you avoid the deprecation warning while achieving the same functionality.
 
