@@ -1,129 +1,77 @@
-To address the requirement of generating 31 triggers only for NPL (Non-Program Lending) facilities, you need to add a check in the generateJsonForSignalMessage method to ensure that triggers are generated exclusively for NPL facilities. Here’s how you can modify the class:
+To achieve this, you can create a CreditFacilityTypeDAO class to execute the query and check if the facility is of type NPL. After that, you can use this condition in your LPDMessageForSignalUtil class to proceed only if the facility is NPL.
 
-Steps:
+Here's how you can structure the CreditFacilityTypeDAO class:
 
-1. Add a check for facility type (NPL):
-Before generating the message, you need to identify whether the facility is NPL or PL. Based on that, you will proceed with trigger generation only for NPL facilities.
+CreditFacilityTypeDAO.java
 
+package com.abnamro.crms.1pdrisksignaladministration.dao;
 
-2. Use the facility type information:
-This check will likely depend on the data available in LPDRiskSignal, such as a field that indicates whether the facility is NPL or PL. You might have something like facilityType in the LPDRiskSignal.
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.jdbc.core.JdbcTemplate;
+import org.springframework.stereotype.Repository;
 
-
-3. Ensure extensibility for future PL triggers:
-Since there may be a future solution for PL, the code should be flexible enough to accommodate that later.
-
-
-
-
----
-
-Full Solution:
-
-@Component
-public class LPDMessageForSignalUtil {
+@Repository
+public class CreditFacilityTypeDAO {
 
     @Autowired
-    LPDTriggerMessageSenderUtil lpdTriggerMessageSenderUtil;
+    private JdbcTemplate jdbcTemplate;
 
-    @Autowired
-    private ServiceBusSenderClient senderClient;
+    public boolean isNPLFacility(String facilityId) {
+        String query = "SELECT 1 FROM CREDIT_FACILITY WHERE FACILITY_ID = ? AND RISK_MANAGEMENT_TYPE = 'NPL'";
+        Integer result = jdbcTemplate.queryForObject(query, new Object[]{facilityId}, Integer.class);
+        return result != null && result == 1;
+    }
+}
 
-    /**
-     * This method generates 31 trigger and sends it to CRMS Trigger Admin Application 
-     * if there is a change in the LPD Deterioration Flag and the facility type is NPL.
-     *
-     * @param lpdRiskSignalNew the new LPDRiskSignal
-     * @param lpdOldRiskSignal the old LPDRiskSignal
-     * @throws LPDException the exception
-     * @throws JsonProcessingException the exception
-     * @throws InterruptedException the exception
-     */
-    public void generateJsonForSignalMessage(LPDRiskSignal lpdRiskSignalNew, LPDRiskSignal lpdOldRiskSignal)
-            throws LPDException, JsonProcessingException, InterruptedException {
+Modification in LPDMessageForSignalUtil.java
 
-        // Check if the facility type is NPL before proceeding
-        if ("NPL".equalsIgnoreCase(lpdRiskSignalNew.getFacilityType())) {
+In your existing class, inject the CreditFacilityTypeDAO and modify the generateJsonForSignalMessage method to add this condition after your initial if statement.
+
+@Autowired
+private CreditFacilityTypeDAO creditFacilityTypeDAO;
+
+public void generateJsonForSignalMessage(LPDRiskSignal lpdRiskSignalNew, LPDRiskSignal lpdOldRiskSignal) 
+        throws LPDException, JsonProcessingException, InterruptedException {
+    
+    // Check if the facility is of type NPL
+    boolean isNPL = creditFacilityTypeDAO.isNPLFacility(lpdRiskSignalNew.getSubjectId());
+    
+    if ((lpdOldRiskSignal != null && 
+         lpdRiskSignalNew.getDetrorationFlag().equalsIgnoreCase(lpdOldRiskSignal.getDetrorationFlag()))
+        || "Y".equalsIgnoreCase(lpdRiskSignalNew.getDetrorationFlag())) {
+        
+        if (isNPL) {
+            CRMSEventPublisherDTO crmsEventPublisherDTO = new CRMSEventPublisherDTO();
+            LPDRiskSignalTriggerDetails eventLPDRiskSignalChangesDetails = new LPDRiskSignalTriggerDetails();
+            SubjectContext subjectContext = new SubjectContext();
             
-            // Proceed with trigger generation only if there's a change in deterioration flag
-            if ((null != lpdOldRiskSignal && 
-                 !lpdRiskSignalNew.getDetrorationFlag().equalsIgnoreCase(lpdOldRiskSignal.getDetrorationFlag())) || 
-                 "Y".equalsIgnoreCase(lpdRiskSignalNew.getDetrorationFlag())) {
-
-                CRMSEventPublisherDTO crmsEventPublisherDTO = new CRMSEventPublisherDTO();
-                LPDRiskSignalTriggerDetails eventLPDRiskSignalChangesDetails = new LPDRiskSignalTriggerDetails();
-                SubjectContext subjectContext = new SubjectContext();
-
-                subjectContext.setCreditFacilityAgreementId(lpdRiskSignalNew.getSubjectId());
-                crmsEventPublisherDTO.setType(LPDRiskSignalConstants.EVENT_TYPE);
-                crmsEventPublisherDTO.setSubmittedDateTime(OffsetDateTime.now().toString());
-                crmsEventPublisherDTO.setPublisherId(LPDRiskSignalConstants.EVENT_PUBLISHER_ID);
-
-                eventLPDRiskSignalChangesDetails.setSignalId(lpdRiskSignalNew.getSignalIdentifier().toString());
-                eventLPDRiskSignalChangesDetails.setOriginalLPD(lpdRiskSignalNew.getOriginalLifetimePD().doubleValue());
-                eventLPDRiskSignalChangesDetails.setResidualLPD(lpdRiskSignalNew.getResidualLifetimePD().doubleValue());
-                eventLPDRiskSignalChangesDetails.setDeteriorationFlag(lpdRiskSignalNew.getDetrorationFlag());
-                eventLPDRiskSignalChangesDetails.setAdministrationStatus(lpdRiskSignalNew.getAdministrationStatus());
-                eventLPDRiskSignalChangesDetails.setLpdVersion(lpdRiskSignalNew.getLpdVersion().toString());
-
-                crmsEventPublisherDTO.setSubjectContext(subjectContext);
-                crmsEventPublisherDTO.setEventLPDRiskSignalChangesDetails(eventLPDRiskSignalChangesDetails);
-
-                ObjectMapper obj = new ObjectMapper();
-                String signalMessage = obj.writeValueAsString(crmsEventPublisherDTO);
-
-                Log.info("Message Generated: " + signalMessage);
-
-                // Send the message to the Service Bus queue
-                senderClient.sendMessage(new ServiceBusMessage(signalMessage));
-
-                Log.info("Message sent successfully to trigger Queue...");
-            }
-
+            subjectContext.setCreditFacilityAgreementId(lpdRiskSignalNew.getSubjectId());
+            crmsEventPublisherDTO.setType(LPDRiskSignalConstants.EVENT_TYPE);
+            crmsEventPublisherDTO.setSubmittedDateTime(OffsetDateTime.now().toString());
+            crmsEventPublisherDTO.setPublisherId(LPDRiskSignalConstants.EVENT_PUBLISHER_ID);
+            
+            eventLPDRiskSignalChangesDetails.setSignalId(lpdRiskSignalNew.getSignalIdentifier().toString());
+            eventLPDRiskSignalChangesDetails.setOriginalLPD(lpdRiskSignalNew.getOriginalLifetimePD().doubleValue());
+            eventLPDRiskSignalChangesDetails.setResidualLPD(lpdRiskSignalNew.getResidualLifetimePD().doubleValue());
+            eventLPDRiskSignalChangesDetails.setDeteriorationFlag(lpdRiskSignalNew.getDetrorationFlag());
+            eventLPDRiskSignalChangesDetails.setAdministrationStatus(lpdRiskSignalNew.getAdministrationStatus());
+            eventLPDRiskSignalChangesDetails.setLpdVersion(lpdRiskSignalNew.getLpdVersion().toString());
+            
+            crmsEventPublisherDTO.setSubjectContext(subjectContext);
+            crmsEventPublisherDTO.setEventLPDRiskSignalChangesDetails(eventLPDRiskSignalChangesDetails);
+            
+            ObjectMapper obj = new ObjectMapper();
+            String signalMessage = obj.writeValueAsString(crmsEventPublisherDTO);
+            log.info("Message Generated: " + signalMessage);
+            
+            // Send message to trigger queue
+            senderClient.sendMessage(new ServiceBusMessage(signalMessage));
+            log.info("Message sent successfully to trigger queue.");
         } else {
-            Log.info("No trigger generated as the facility type is not NPL.");
+            log.info("Facility is not of type NPL, skipping message generation.");
         }
     }
 }
 
-
----
-
-Explanation of Changes:
-
-1. Facility Type Check:
-
-Added a condition at the start to check if the facilityType of lpdRiskSignalNew is "NPL".
-
-The method only proceeds with generating the 31 trigger if the facility is NPL.
-
-
-
-2. Trigger Generation:
-
-The existing logic remains the same, ensuring that the message is generated and sent if the deterioration flag has changed or is set to "Y".
-
-
-
-3. Logging for Non-NPL:
-
-If the facility is not NPL, it logs a message saying no trigger is generated.
-
-
-
-
-
----
-
-Future Extension for PL:
-
-When a solution for PL facilities is implemented, you can modify this block to include a case for PL:
-
-if ("NPL".equalsIgnoreCase(lpdRiskSignalNew.getFacilityType())) {
-    // NPL logic here
-} else if ("PL".equalsIgnoreCase(lpdRiskSignalNew.getFacilityType())) {
-    // Future PL logic here
-}
-
-This way, your solution remains flexible and easily extensible for future requirements.
+This will ensure that the message is generated and sent only if the facility is of type NPL. Otherwise, the method will log and skip the process.
 
