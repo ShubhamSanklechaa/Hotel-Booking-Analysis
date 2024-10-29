@@ -1,118 +1,123 @@
-To achieve 100% code coverage for your LPDMessageForSignalUtil class, let's write a JUnit 5 test class using Mockito to mock dependencies. This will cover different scenarios for the generateJsonForSignalMessage method.
+To achieve 100% code coverage for the LPDTriggerMessageSenderUtil class using JUnit 5 and Mockito, we can mock dependencies and verify method calls and interactions. Below is a JUnit 5 test class that covers various parts of LPDTriggerMessageSenderUtil, including exception handling.
 
-Here’s how your test class might look:
+package com.abnamro.crms.1pdrisksignaladministration.utility;
 
-package com.abnamro.crms.lpdrisksignaladministration.utility;
-
-import com.abnamro.crms.lpdrisksignaladministration.dto.CRMSEventPublisherDTO;
-import com.abnamro.crms.lpdrisksignaladministration.model.LPDRiskSignal;
-import com.abnamro.crms.lpdrisksignaladministration.constants.LPDRiskSignalConstants;
-import com.abnamro.crms.lpdrisksignaladministration.dao.CreditFacilityRMTypeDao;
-import com.azure.messaging.servicebus.ServiceBusSenderClient;
-import com.azure.messaging.servicebus.ServiceBusMessage;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.microsoft.azure.servicebus.ServiceBusException;
+import com.microsoft.azure.servicebus.ServiceBusMessage;
+import org.apache.commons.lang3.exception.ExceptionUtils;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
-import org.mockito.Mockito;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.test.util.ReflectionTestUtils;
 
+import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 import static org.mockito.Mockito.*;
 
 @ExtendWith(MockitoExtension.class)
-public class LPDMessageForSignalUtilTest {
+public class LPDTriggerMessageSenderUtilTest {
 
     @Mock
-    private CreditFacilityRMTypeDao creditFacilityRMTypeDao;
+    private ObjectMapper objectMapper;
 
     @Mock
-    private ServiceBusSenderClient senderClient;
+    private ServiceBusConfig serviceBusConfig;
+
+    @Mock
+    private Logger log;
 
     @InjectMocks
-    private LPDMessageForSignalUtil lpdMessageForSignalUtil;
+    private LPDTriggerMessageSenderUtil messageSenderUtil;
 
-    private LPDRiskSignal newRiskSignal;
-    private LPDRiskSignal oldRiskSignal;
+    @Value("$(event.writer.queue)")
+    private String queueNameRSD;
 
     @BeforeEach
-    public void setUp() {
-        newRiskSignal = new LPDRiskSignal();
-        newRiskSignal.setDetrorationFlag("Y");
-        newRiskSignal.setSubjectId("123");
-        newRiskSignal.setSignalIdentifier(123L);
-        newRiskSignal.setOriginalLifetimePD(0.5);
-        newRiskSignal.setResidualLifetimePD(0.3);
-        newRiskSignal.setAdministrationStatus("Active");
-        newRiskSignal.setLpdVersion(1);
-
-        oldRiskSignal = new LPDRiskSignal();
-        oldRiskSignal.setDetrorationFlag("N");
+    void setUp() {
+        ReflectionTestUtils.setField(messageSenderUtil, "queueNameRSD", queueNameRSD);
     }
 
     @Test
-    public void testGenerateJsonForSignalMessageWithTrigger() throws Exception {
-        when(creditFacilityRMTypeDao.existsByFacilityIdAndRiskManagementType(anyString(), anyString())).thenReturn(true);
+    public void testConvertAndSendToRsdQueue_Success() throws JsonProcessingException, ServiceBusException {
+        // Arrange
+        EventDTO eventDTO = new EventDTO();
+        String message = "testMessage";
 
-        lpdMessageForSignalUtil.generateJsonForSignalMessage(newRiskSignal, oldRiskSignal);
+        when(objectMapper.writeValueAsString(eventDTO)).thenReturn(message);
+        when(serviceBusConfig.getInstance().getSenderClient()).thenReturn(mock(ServiceBusMessage.class));
 
-        verify(senderClient, times(1)).sendMessage(any(ServiceBusMessage.class));
+        // Act & Assert
+        assertDoesNotThrow(() -> messageSenderUtil.convertAndSendToRsdQueue(eventDTO));
+        verify(log).info("Sending Message to RSD queue...");
+        verify(log).info("Message sent successfully to RSD Queue...");
     }
 
     @Test
-    public void testGenerateJsonForSignalMessageNoTriggerFacilityNotNPL() throws Exception {
-        when(creditFacilityRMTypeDao.existsByFacilityIdAndRiskManagementType(anyString(), anyString())).thenReturn(false);
+    public void testConvertAndSendToRsdQueue_JsonProcessingException() throws JsonProcessingException {
+        // Arrange
+        EventDTO eventDTO = new EventDTO();
+        when(objectMapper.writeValueAsString(eventDTO)).thenThrow(new JsonProcessingException("error") {});
 
-        lpdMessageForSignalUtil.generateJsonForSignalMessage(newRiskSignal, oldRiskSignal);
+        // Act
+        messageSenderUtil.convertAndSendToRsdQueue(eventDTO);
 
-        verify(senderClient, never()).sendMessage(any(ServiceBusMessage.class));
+        // Assert
+        verify(log).error(eq("Error occurred while sending the message to rsd queue = {}"),
+                          eq(ExceptionUtils.getStackTrace(any(JsonProcessingException.class))));
     }
 
     @Test
-    public void testGenerateJsonForSignalMessageNoTriggerNoFlagChange() throws Exception {
-        oldRiskSignal.setDetrorationFlag("Y");  // Same as newRiskSignal
+    public void testConvertAndSendToRsdQueue_ServiceBusException() throws JsonProcessingException, ServiceBusException {
+        // Arrange
+        EventDTO eventDTO = new EventDTO();
+        String message = "testMessage";
 
-        lpdMessageForSignalUtil.generateJsonForSignalMessage(newRiskSignal, oldRiskSignal);
+        when(objectMapper.writeValueAsString(eventDTO)).thenReturn(message);
+        doThrow(new ServiceBusException(false)).when(serviceBusConfig.getInstance().getSenderClient()).sendMessage(any(ServiceBusMessage.class));
 
-        verify(senderClient, never()).sendMessage(any(ServiceBusMessage.class));
-    }
+        // Act
+        messageSenderUtil.convertAndSendToRsdQueue(eventDTO);
 
-    @Test
-    public void testGenerateJsonForSignalMessageWithJsonProcessingException() throws Exception {
-        ObjectMapper objectMapperMock = mock(ObjectMapper.class);
-        LPDMessageForSignalUtil utilWithMockedObjectMapper = new LPDMessageForSignalUtil(senderClient, creditFacilityRMTypeDao, objectMapperMock);
-
-        when(objectMapperMock.writeValueAsString(any(CRMSEventPublisherDTO.class)))
-            .thenThrow(new JsonProcessingException("Json processing exception") {});
-
-        Exception exception = assertThrows(JsonProcessingException.class, () -> {
-            utilWithMockedObjectMapper.generateJsonForSignalMessage(newRiskSignal, oldRiskSignal);
-        });
-
-        verify(senderClient, never()).sendMessage(any(ServiceBusMessage.class));
+        // Assert
+        verify(log).error(eq("Error occurred while sending the message to rsd queue = {}"),
+                          eq(ExceptionUtils.getStackTrace(any(ServiceBusException.class))));
     }
 }
 
-Explanation:
+Explanation
 
-1. Dependencies: We mock CreditFacilityRMTypeDao and ServiceBusSenderClient dependencies.
+1. Mocks and Dependency Injection:
 
+The ObjectMapper and ServiceBusConfig are mocked to simulate their behavior without performing real operations.
 
-2. Test Cases:
-
-testGenerateJsonForSignalMessageWithTrigger: Tests the case where a 31 trigger is generated and sent to the queue.
-
-testGenerateJsonForSignalMessageNoTriggerFacilityNotNPL: Tests when the facility type is not NPL, so no trigger should be generated.
-
-testGenerateJsonForSignalMessageNoTriggerNoFlagChange: Tests when there’s no change in the deterioration flag.
-
-testGenerateJsonForSignalMessageWithJsonProcessingException
+The Logger is mocked to verify that logging messages are printed as expected.
 
 
 
+2. Test Setup:
+
+@BeforeEach method uses ReflectionTestUtils to set the queueNameRSD field.
+
+
+
+3. Success Scenario (testConvertAndSendToRsdQueue_Success):
+
+Mocks ObjectMapper to return a sample message string and verifies logging calls.
+
+
+
+4. Exception Scenarios:
+
+testConvertAndSendToRsdQueue_JsonProcessingException and testConvertAndSendToRsdQueue_ServiceBusException verify that the appropriate error logs are triggered in case of JsonProcessingException and ServiceBusException, respectively.
+
+
+
+
+This test suite aims for 100% code coverage by covering the main execution flow and exception handling in convertAndSendToRsdQueue.
 
