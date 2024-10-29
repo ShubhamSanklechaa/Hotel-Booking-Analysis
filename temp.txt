@@ -1,37 +1,118 @@
-The warning you're seeing indicates that the queryForObject(String, Object[], Class<Integer>) method from JdbcTemplate is deprecated. You should update the method to use the recommended alternative, which is queryForObject(String, Object[], RowMapper) or queryForObject(String, SqlParameterSource, Class).
+To achieve 100% code coverage for your LPDMessageForSignalUtil class, let's write a JUnit 5 test class using Mockito to mock dependencies. This will cover different scenarios for the generateJsonForSignalMessage method.
 
-Here’s how you can modify the method using RowMapper to avoid the deprecation warning:
+Here’s how your test class might look:
 
-Updated CreditFacilityTypeDAO.java:
+package com.abnamro.crms.lpdrisksignaladministration.utility;
 
-import org.springframework.jdbc.core.RowMapper;
-import java.sql.ResultSet;
-import java.sql.SQLException;
+import com.abnamro.crms.lpdrisksignaladministration.dto.CRMSEventPublisherDTO;
+import com.abnamro.crms.lpdrisksignaladministration.model.LPDRiskSignal;
+import com.abnamro.crms.lpdrisksignaladministration.constants.LPDRiskSignalConstants;
+import com.abnamro.crms.lpdrisksignaladministration.dao.CreditFacilityRMTypeDao;
+import com.azure.messaging.servicebus.ServiceBusSenderClient;
+import com.azure.messaging.servicebus.ServiceBusMessage;
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.InjectMocks;
+import org.mockito.Mock;
+import org.mockito.Mockito;
+import org.mockito.junit.jupiter.MockitoExtension;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Autowired;
 
-@Repository
-public class CreditFacilityTypeDAO {
+import static org.mockito.Mockito.*;
 
-    @Autowired
-    private JdbcTemplate jdbcTemplate;
+@ExtendWith(MockitoExtension.class)
+public class LPDMessageForSignalUtilTest {
 
-    public boolean isNPLFacility(String facilityId) {
-        String query = "SELECT 1 FROM CREDIT_FACILITY WHERE FACILITY_ID = ? AND RISK_MANAGEMENT_TYPE = 'NPL'";
-        Integer result = jdbcTemplate.queryForObject(query, new Object[]{facilityId}, new RowMapper<Integer>() {
-            @Override
-            public Integer mapRow(ResultSet rs, int rowNum) throws SQLException {
-                return rs.getInt(1);
-            }
+    @Mock
+    private CreditFacilityRMTypeDao creditFacilityRMTypeDao;
+
+    @Mock
+    private ServiceBusSenderClient senderClient;
+
+    @InjectMocks
+    private LPDMessageForSignalUtil lpdMessageForSignalUtil;
+
+    private LPDRiskSignal newRiskSignal;
+    private LPDRiskSignal oldRiskSignal;
+
+    @BeforeEach
+    public void setUp() {
+        newRiskSignal = new LPDRiskSignal();
+        newRiskSignal.setDetrorationFlag("Y");
+        newRiskSignal.setSubjectId("123");
+        newRiskSignal.setSignalIdentifier(123L);
+        newRiskSignal.setOriginalLifetimePD(0.5);
+        newRiskSignal.setResidualLifetimePD(0.3);
+        newRiskSignal.setAdministrationStatus("Active");
+        newRiskSignal.setLpdVersion(1);
+
+        oldRiskSignal = new LPDRiskSignal();
+        oldRiskSignal.setDetrorationFlag("N");
+    }
+
+    @Test
+    public void testGenerateJsonForSignalMessageWithTrigger() throws Exception {
+        when(creditFacilityRMTypeDao.existsByFacilityIdAndRiskManagementType(anyString(), anyString())).thenReturn(true);
+
+        lpdMessageForSignalUtil.generateJsonForSignalMessage(newRiskSignal, oldRiskSignal);
+
+        verify(senderClient, times(1)).sendMessage(any(ServiceBusMessage.class));
+    }
+
+    @Test
+    public void testGenerateJsonForSignalMessageNoTriggerFacilityNotNPL() throws Exception {
+        when(creditFacilityRMTypeDao.existsByFacilityIdAndRiskManagementType(anyString(), anyString())).thenReturn(false);
+
+        lpdMessageForSignalUtil.generateJsonForSignalMessage(newRiskSignal, oldRiskSignal);
+
+        verify(senderClient, never()).sendMessage(any(ServiceBusMessage.class));
+    }
+
+    @Test
+    public void testGenerateJsonForSignalMessageNoTriggerNoFlagChange() throws Exception {
+        oldRiskSignal.setDetrorationFlag("Y");  // Same as newRiskSignal
+
+        lpdMessageForSignalUtil.generateJsonForSignalMessage(newRiskSignal, oldRiskSignal);
+
+        verify(senderClient, never()).sendMessage(any(ServiceBusMessage.class));
+    }
+
+    @Test
+    public void testGenerateJsonForSignalMessageWithJsonProcessingException() throws Exception {
+        ObjectMapper objectMapperMock = mock(ObjectMapper.class);
+        LPDMessageForSignalUtil utilWithMockedObjectMapper = new LPDMessageForSignalUtil(senderClient, creditFacilityRMTypeDao, objectMapperMock);
+
+        when(objectMapperMock.writeValueAsString(any(CRMSEventPublisherDTO.class)))
+            .thenThrow(new JsonProcessingException("Json processing exception") {});
+
+        Exception exception = assertThrows(JsonProcessingException.class, () -> {
+            utilWithMockedObjectMapper.generateJsonForSignalMessage(newRiskSignal, oldRiskSignal);
         });
-        return result != null && result == 1;
+
+        verify(senderClient, never()).sendMessage(any(ServiceBusMessage.class));
     }
 }
 
-Key Changes:
+Explanation:
 
-I replaced the deprecated method with jdbcTemplate.queryForObject(query, Object[], RowMapper<Integer>).
-
-The RowMapper implementation is used to map the result set, returning the required integer value.
+1. Dependencies: We mock CreditFacilityRMTypeDao and ServiceBusSenderClient dependencies.
 
 
-This way, you avoid the deprecation warning while achieving the same functionality.
+2. Test Cases:
+
+testGenerateJsonForSignalMessageWithTrigger: Tests the case where a 31 trigger is generated and sent to the queue.
+
+testGenerateJsonForSignalMessageNoTriggerFacilityNotNPL: Tests when the facility type is not NPL, so no trigger should be generated.
+
+testGenerateJsonForSignalMessageNoTriggerNoFlagChange: Tests when there’s no change in the deterioration flag.
+
+testGenerateJsonForSignalMessageWithJsonProcessingException
+
+
+
 
