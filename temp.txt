@@ -1,9 +1,12 @@
-To achieve 100% code coverage for the LPDTriggerMessageSenderUtil class using JUnit 5 and Mockito, we can mock dependencies and verify method calls and interactions. Below is a JUnit 5 test class that covers various parts of LPDTriggerMessageSenderUtil, including exception handling.
+To ensure that all test cases pass with 100% coverage, we need to refine the test cases, especially focusing on mocking behaviors in the try-catch blocks. I'll update the code to mock both JsonProcessingException and ServiceBusException scenarios accurately, ensuring the catch blocks are executed correctly.
+
+Here's the updated test class:
 
 package com.abnamro.crms.1pdrisksignaladministration.utility;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.microsoft.azure.servicebus.IMessageSender;
 import com.microsoft.azure.servicebus.ServiceBusException;
 import com.microsoft.azure.servicebus.ServiceBusMessage;
 import org.apache.commons.lang3.exception.ExceptionUtils;
@@ -14,7 +17,6 @@ import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.slf4j.Logger;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.test.util.ReflectionTestUtils;
 
 import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
@@ -32,15 +34,16 @@ public class LPDTriggerMessageSenderUtilTest {
     @Mock
     private Logger log;
 
+    @Mock
+    private IMessageSender messageSender;
+
     @InjectMocks
     private LPDTriggerMessageSenderUtil messageSenderUtil;
 
-    @Value("$(event.writer.queue)")
-    private String queueNameRSD;
-
     @BeforeEach
     void setUp() {
-        ReflectionTestUtils.setField(messageSenderUtil, "queueNameRSD", queueNameRSD);
+        ReflectionTestUtils.setField(messageSenderUtil, "queueNameRSD", "testQueue");
+        when(serviceBusConfig.getInstance().getSenderClient()).thenReturn(messageSender);
     }
 
     @Test
@@ -50,11 +53,11 @@ public class LPDTriggerMessageSenderUtilTest {
         String message = "testMessage";
 
         when(objectMapper.writeValueAsString(eventDTO)).thenReturn(message);
-        when(serviceBusConfig.getInstance().getSenderClient()).thenReturn(mock(ServiceBusMessage.class));
 
         // Act & Assert
         assertDoesNotThrow(() -> messageSenderUtil.convertAndSendToRsdQueue(eventDTO));
         verify(log).info("Sending Message to RSD queue...");
+        verify(messageSender).sendMessage(any(ServiceBusMessage.class));
         verify(log).info("Message sent successfully to RSD Queue...");
     }
 
@@ -62,14 +65,16 @@ public class LPDTriggerMessageSenderUtilTest {
     public void testConvertAndSendToRsdQueue_JsonProcessingException() throws JsonProcessingException {
         // Arrange
         EventDTO eventDTO = new EventDTO();
-        when(objectMapper.writeValueAsString(eventDTO)).thenThrow(new JsonProcessingException("error") {});
+
+        // Simulate a JsonProcessingException when converting eventDTO to JSON
+        when(objectMapper.writeValueAsString(eventDTO)).thenThrow(new JsonProcessingException("JSON processing error") {});
 
         // Act
         messageSenderUtil.convertAndSendToRsdQueue(eventDTO);
 
         // Assert
         verify(log).error(eq("Error occurred while sending the message to rsd queue = {}"),
-                          eq(ExceptionUtils.getStackTrace(any(JsonProcessingException.class))));
+                argThat(stackTrace -> stackTrace.contains("JsonProcessingException")));
     }
 
     @Test
@@ -79,45 +84,39 @@ public class LPDTriggerMessageSenderUtilTest {
         String message = "testMessage";
 
         when(objectMapper.writeValueAsString(eventDTO)).thenReturn(message);
-        doThrow(new ServiceBusException(false)).when(serviceBusConfig.getInstance().getSenderClient()).sendMessage(any(ServiceBusMessage.class));
+
+        // Simulate a ServiceBusException when sending the message
+        doThrow(new ServiceBusException(false, "Service Bus error")).when(messageSender).sendMessage(any(ServiceBusMessage.class));
 
         // Act
         messageSenderUtil.convertAndSendToRsdQueue(eventDTO);
 
         // Assert
         verify(log).error(eq("Error occurred while sending the message to rsd queue = {}"),
-                          eq(ExceptionUtils.getStackTrace(any(ServiceBusException.class))));
+                argThat(stackTrace -> stackTrace.contains("ServiceBusException")));
     }
 }
 
-Explanation
+Explanation of Changes:
 
-1. Mocks and Dependency Injection:
+1. Mocking IMessageSender:
 
-The ObjectMapper and ServiceBusConfig are mocked to simulate their behavior without performing real operations.
-
-The Logger is mocked to verify that logging messages are printed as expected.
+Created a mock for IMessageSender, which is the type of object returned by serviceBusConfig.getInstance().getSenderClient().
 
 
 
-2. Test Setup:
+2. Refined ServiceBusException Test:
 
-@BeforeEach method uses ReflectionTestUtils to set the queueNameRSD field.
-
-
-
-3. Success Scenario (testConvertAndSendToRsdQueue_Success):
-
-Mocks ObjectMapper to return a sample message string and verifies logging calls.
+We mock sendMessage on the messageSender object to throw a ServiceBusException. This ensures that the catch block for ServiceBusException is triggered.
 
 
 
-4. Exception Scenarios:
+3. Enhanced Exception Assertions:
 
-testConvertAndSendToRsdQueue_JsonProcessingException and testConvertAndSendToRsdQueue_ServiceBusException verify that the appropriate error logs are triggered in case of JsonProcessingException and ServiceBusException, respectively.
+In the testConvertAndSendToRsdQueue_JsonProcessingException and testConvertAndSendToRsdQueue_ServiceBusException methods, used argThat to verify that the exact exception type (JsonProcessingException or ServiceBusException) appears in the stack trace logged.
 
 
 
 
-This test suite aims for 100% code coverage by covering the main execution flow and exception handling in convertAndSendToRsdQueue.
+This update should ensure that both try-catch blocks are tested thoroughly and that all test cases pass, achieving 100% code coverage.
 
