@@ -1,67 +1,82 @@
-To achieve 100% code coverage for the LPDRiskSignalApp class, which is the main Spring Boot application starter, we can focus on testing the main method and ensuring that the application context starts as expected. Although the main method usually has limited logic, you can verify that SpringApplication.run is called and the log entry is generated.
+package com.abnamro.crms.lpdrisksignaladministration.utility;
 
-Here's a JUnit 5 test class using Mockito:
-
-package com.abnamro.crms.lpdrisksignaladministration;
-
+import com.abnamro.commons.dto.EventDTO;
+import com.abnamro.crms.lpdrisksignaladministration.config.ServiceBusConfig;
+import com.azure.messaging.servicebus.ServiceBusException;
+import com.azure.messaging.servicebus.ServiceBusMessage;
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import org.apache.commons.lang3.exception.ExceptionUtils;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
-import org.mockito.MockedStatic;
+import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
-import org.springframework.boot.SpringApplication;
-import org.springframework.boot.test.system.CapturedOutput;
-import org.springframework.boot.test.system.OutputCaptureExtension;
-import org.springframework.boot.web.servlet.support.SpringBootServletInitializer;
-import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.test.util.ReflectionTestUtils;
 
-import static org.junit.jupiter.api.Assertions.assertTrue;
-import static org.mockito.Mockito.mockStatic;
+import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.*;
 
 @ExtendWith(MockitoExtension.class)
-@ExtendWith(OutputCaptureExtension.class)
-public class LPDRiskSignalAppTest {
+public class LPDTriggerMessageSenderUtilTest {
+
+    @Mock
+    private ServiceBusConfig serviceBusConfig;
+
+    @Mock
+    private ObjectMapper objectMapper;
 
     @InjectMocks
-    private LPDRiskSignalApp lpdRiskSignalApp;
+    private LPDTriggerMessageSenderUtil lpdTriggerMessageSenderUtil;
+
+    @Value("${event.writer.queue}")
+    private String queueNameRSD;
+
+    @BeforeEach
+    void setUp() {
+        ReflectionTestUtils.setField(lpdTriggerMessageSenderUtil, "queueNameRSD", "test-queue");
+    }
 
     @Test
-    public void testMain(CapturedOutput output) {
-        // Mock SpringApplication.run to prevent the actual application from starting
-        try (MockedStatic<SpringApplication> mockedSpringApplication = mockStatic(SpringApplication.class)) {
-            mockedSpringApplication.when(() -> SpringApplication.run(LPDRiskSignalApp.class, new String[]{}))
-                                   .thenReturn(null);
+    void testConvertAndSendToRsdQueue_Success() throws JsonProcessingException, ServiceBusException {
+        EventDTO eventDTO = new EventDTO();
+        String message = "test-message";
 
-            // Call the main method
-            LPDRiskSignalApp.main(new String[]{});
+        when(objectMapper.writeValueAsString(eventDTO)).thenReturn(message);
+        doNothing().when(serviceBusConfig.getInstance().getSenderClient()).sendMessage(any(ServiceBusMessage.class));
 
-            // Verify that SpringApplication.run was called
-            mockedSpringApplication.verify(() -> SpringApplication.run(LPDRiskSignalApp.class, new String[]{}));
+        assertDoesNotThrow(() -> lpdTriggerMessageSenderUtil.convertAndSendToRsdQueue(eventDTO));
 
-            // Check the log output to ensure "Starting LPD Application" message is printed
-            assertTrue(output.getOut().contains("Starting LPD Application"));
-        }
+        verify(objectMapper, times(1)).writeValueAsString(eventDTO);
+        verify(serviceBusConfig.getInstance().getSenderClient(), times(1)).sendMessage(any(ServiceBusMessage.class));
+    }
+
+    @Test
+    void testConvertAndSendToRsdQueue_JsonProcessingException() throws JsonProcessingException {
+        EventDTO eventDTO = new EventDTO();
+
+        when(objectMapper.writeValueAsString(eventDTO)).thenThrow(JsonProcessingException.class);
+
+        assertDoesNotThrow(() -> lpdTriggerMessageSenderUtil.convertAndSendToRsdQueue(eventDTO));
+
+        verify(objectMapper, times(1)).writeValueAsString(eventDTO);
+        verify(serviceBusConfig.getInstance().getSenderClient(), never()).sendMessage(any(ServiceBusMessage.class));
+    }
+
+    @Test
+    void testConvertAndSendToRsdQueue_ServiceBusException() throws JsonProcessingException, ServiceBusException {
+        EventDTO eventDTO = new EventDTO();
+        String message = "test-message";
+
+        when(objectMapper.writeValueAsString(eventDTO)).thenReturn(message);
+        doThrow(ServiceBusException.class).when(serviceBusConfig.getInstance().getSenderClient()).sendMessage(any(ServiceBusMessage.class));
+
+        assertDoesNotThrow(() -> lpdTriggerMessageSenderUtil.convertAndSendToRsdQueue(eventDTO));
+
+        verify(objectMapper, times(1)).writeValueAsString(eventDTO);
+        verify(serviceBusConfig.getInstance().getSenderClient(), times(1)).sendMessage(any(ServiceBusMessage.class));
     }
 }
-
-Explanation
-
-1. Mockito Static Mocking:
-
-mockStatic(SpringApplication.class) prevents the real Spring Boot application from starting.
-
-Verifies that SpringApplication.run is called with LPDRiskSignalApp.class and an empty String array.
-
-
-
-2. Captured Output:
-
-OutputCaptureExtension captures the log output.
-
-Verifies that "Starting LPD Application" is logged, confirming the Log.info message.
-
-
-
-
-This approach ensures that the main method is covered, and both SpringApplication.run and the log message are verified for 100% coverage.
-
