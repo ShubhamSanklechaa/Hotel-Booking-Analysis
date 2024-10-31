@@ -50,13 +50,15 @@ public class LPDControlServiceImplTest {
         String errorMsg = "errorMessage";
         String facilityIdentifier = "facility123";
 
-        when(lpdControlServiceDao.save(any(LPDControl.class))).thenThrow(new DataAccessException("...") {});
+        DataAccessException dataAccessException = new DataAccessException("...") {};
+        when(lpdControlServiceDao.save(any(LPDControl.class))).thenThrow(dataAccessException);
 
         LPDException exception = assertThrows(LPDException.class, () -> {
             lpdControlServiceImpl.logLPDControlError(inputString, errorMsg, facilityIdentifier);
         });
 
         assertEquals("Error occurred while saving LPDControl", exception.getMessage());
+        assertEquals(dataAccessException, exception.getCause());
         verify(lpdControlServiceDao, times(1)).save(any(LPDControl.class));
     }
 }
