@@ -1,57 +1,62 @@
-import com.abnamro.commons.dto.EventDTO;
-import com.abnamro.crms.lpdrisksignaladministration.config.ServiceBusConfig;
-import com.azure.messaging.servicebus.ServiceBusException;
-import com.azure.messaging.servicebus.ServiceBusMessage;
-import com.fasterxml.jackson.core.JsonProcessingException;
-import com.fasterxml.jackson.databind.ObjectMapper;
+package com.abnamro.crms.lpdrisksignaladministration.service.impl;
+
+import static org.junit.jupiter.api.Assertions.*;
+import static org.mockito.Mockito.*;
+
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.dao.DataAccessException;
 
-import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.Mockito.*;
+import com.abnamro.crms.lpdrisksignaladministration.dao.LPDControlServiceDao;
+import com.abnamro.crms.lpdrisksignaladministration.exception.LPDException;
+import com.abnamro.crms.lpdrisksignaladministration.model.LPDControl;
 
 @ExtendWith(MockitoExtension.class)
-public class LPDTriggerMessageSenderUtilTest {
+public class LPDControlServiceImplTest {
 
     @Mock
-    private ServiceBusConfig serviceBusConfig;
-
-    @Mock
-    private ObjectMapper objectMapper;
+    private LPDControlServiceDao lpdControlServiceDao;
 
     @InjectMocks
-    private LPDTriggerMessageSenderUtil lpdTriggerMessageSenderUtil;
+    private LPDControlServiceImpl lpdControlServiceImpl;
+
+    private LPDControl lpdControl;
 
     @BeforeEach
-    void setUp() {
-        ServiceBusSenderClient senderClient = mock(ServiceBusSenderClient.class);
-        when(serviceBusConfig.getSenderClient()).thenReturn(senderClient);
+    public void setUp() {
+        lpdControl = new LPDControl();
     }
 
     @Test
-    void testConvertAndSendToRsdQueue() throws JsonProcessingException, ServiceBusException {
-        EventDTO eventDTO = new EventDTO();
-        String message = "test message";
+    public void testLogLPDControlError_Success() throws LPDException {
+        String inputString = "inputJson";
+        String errorMsg = "errorMessage";
+        String facilityIdentifier = "facility123";
 
-        when(objectMapper.writeValueAsString(eventDTO)).thenReturn(message);
+        when(lpdControlServiceDao.save(any(LPDControl.class))).thenReturn(lpdControl);
 
-        lpdTriggerMessageSenderUtil.convertAndSendToRsdQueue(eventDTO);
+        lpdControlServiceImpl.logLPDControlError(inputString, errorMsg, facilityIdentifier);
 
-        verify(serviceBusConfig.getSenderClient(), times(1)).sendMessage(any(ServiceBusMessage.class));
+        verify(lpdControlServiceDao, times(1)).save(any(LPDControl.class));
     }
 
     @Test
-    void testConvertAndSendToRsdQueue_Exception() throws JsonProcessingException, ServiceBusException {
-        EventDTO eventDTO = new EventDTO();
+    public void testLogLPDControlError_DataAccessException() {
+        String inputString = "inputJson";
+        String errorMsg = "errorMessage";
+        String facilityIdentifier = "facility123";
 
-        when(objectMapper.writeValueAsString(eventDTO)).thenThrow(new JsonProcessingException("Test Exception") {});
+        when(lpdControlServiceDao.save(any(LPDControl.class))).thenThrow(new DataAccessException("...") {});
 
-        lpdTriggerMessageSenderUtil.convertAndSendToRsdQueue(eventDTO);
+        LPDException exception = assertThrows(LPDException.class, () -> {
+            lpdControlServiceImpl.logLPDControlError(inputString, errorMsg, facilityIdentifier);
+        });
 
-        verify(serviceBusConfig.getSenderClient(), never()).sendMessage(any(ServiceBusMessage.class));
+        assertEquals("Error occurred while saving LPDControl", exception.getMessage());
+        verify(lpdControlServiceDao, times(1)).save(any(LPDControl.class));
     }
 }
