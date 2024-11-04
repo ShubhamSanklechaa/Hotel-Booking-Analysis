@@ -1,57 +1,49 @@
 package com.abnamro.crms.lpdrisksignaladministration.model;
 
+import static org.junit.jupiter.api.Assertions.*;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
-import org.mockito.InjectMocks;
 import org.mockito.junit.jupiter.MockitoExtension;
-
-import static org.junit.jupiter.api.Assertions.*;
 
 @ExtendWith(MockitoExtension.class)
 class CreditFacilityRMTypeTest {
 
-    @InjectMocks
     private CreditFacilityRMType creditFacilityRMType;
 
+    private static final Long CREDIT_FACILITY_RM_TYPE_ID = 1L;
+    private static final String FACILITY_ID = "F12345";
+    private static final String RISK_MANAGEMENT_TYPE = "High";
+
     @BeforeEach
-    void setUp() {
+    void setup() {
         creditFacilityRMType = new CreditFacilityRMType();
-        creditFacilityRMType.setCreditFacilityRMTypeId(1L);
-        creditFacilityRMType.setFacilityId("FAC123");
-        creditFacilityRMType.setRiskManagementType("TypeA");
+        creditFacilityRMType.setCreditFacilityRMTypeId(CREDIT_FACILITY_RM_TYPE_ID);
+        creditFacilityRMType.setFacilityId(FACILITY_ID);
+        creditFacilityRMType.setRiskManagementType(RISK_MANAGEMENT_TYPE);
     }
 
     @Test
-    void testGetCreditFacilityRMTypeId() {
-        assertEquals(1L, creditFacilityRMType.getCreditFacilityRMTypeId());
+    void testGettersAndSetters() {
+        assertEquals(CREDIT_FACILITY_RM_TYPE_ID, creditFacilityRMType.getCreditFacilityRMTypeId());
+        assertEquals(FACILITY_ID, creditFacilityRMType.getFacilityId());
+        assertEquals(RISK_MANAGEMENT_TYPE, creditFacilityRMType.getRiskManagementType());
     }
 
     @Test
-    void testSetCreditFacilityRMTypeId() {
-        creditFacilityRMType.setCreditFacilityRMTypeId(2L);
-        assertEquals(2L, creditFacilityRMType.getCreditFacilityRMTypeId());
+    void testEqualsAndHashCode() {
+        CreditFacilityRMType anotherCreditFacilityRMType = new CreditFacilityRMType();
+        anotherCreditFacilityRMType.setCreditFacilityRMTypeId(CREDIT_FACILITY_RM_TYPE_ID);
+        anotherCreditFacilityRMType.setFacilityId(FACILITY_ID);
+        anotherCreditFacilityRMType.setRiskManagementType(RISK_MANAGEMENT_TYPE);
+
+        assertEquals(creditFacilityRMType, anotherCreditFacilityRMType);
+        assertEquals(creditFacilityRMType.hashCode(), anotherCreditFacilityRMType.hashCode());
     }
 
     @Test
-    void testGetFacilityId() {
-        assertEquals("FAC123", creditFacilityRMType.getFacilityId());
-    }
-
-    @Test
-    void testSetFacilityId() {
-        creditFacilityRMType.setFacilityId("FAC456");
-        assertEquals("FAC456", creditFacilityRMType.getFacilityId());
-    }
-
-    @Test
-    void testGetRiskManagementType() {
-        assertEquals("TypeA", creditFacilityRMType.getRiskManagementType());
-    }
-
-    @Test
-    void testSetRiskManagementType() {
-        creditFacilityRMType.setRiskManagementType("TypeB");
-        assertEquals("TypeB", creditFacilityRMType.getRiskManagementType());
+    void testToString() {
+        String expected = "CreditFacilityRMType(creditFacilityRMTypeId=1, facilityId=F12345, riskManagementType=High)";
+        assertEquals(expected, creditFacilityRMType.toString());
     }
 }
