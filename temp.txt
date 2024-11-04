@@ -1,166 +1,57 @@
-Here's a JUnit 5 Mockito test example for the LPDRiskSignalServiceIntlImpl class. This example assumes that you're looking to test some key methods, such as saveLPDRiskSignalIntl, sendIntlEventMessageToRSD, and other utility methods. It includes setting up mocks for dependencies and writing test cases for the main methods.
+package com.abnamro.crms.lpdrisksignaladministration.model;
 
-import static org.junit.jupiter.api.Assertions.*;
-import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.ArgumentMatchers.eq;
-import static org.mockito.Mockito.*;
-
-import com.abnamro.crms.lpdrisksignaladministration.constants.LPDControlConstants;
-import com.abnamro.crms.lpdrisksignaladministration.constants.LPDRiskSignalConstants;
-import com.abnamro.crms.lpdrisksignaladministration.dao.CreditFacilityDao;
-import com.abnamro.crms.lpdrisksignaladministration.dao.CreditRiskMonitoringEventDao;
-import com.abnamro.crms.lpdrisksignaladministration.dao.LPDRiskSignalServiceDao;
-import com.abnamro.crms.lpdrisksignaladministration.dto.CreditFacilityDTO;
-import com.abnamro.crms.lpdrisksignaladministration.dto.CurrentAccountDTO;
-import com.abnamro.crms.lpdrisksignaladministration.exception.LPDException;
-import com.abnamro.crms.lpdrisksignaladministration.model.CreditRiskMonitoringEvent;
-import com.abnamro.crms.lpdrisksignaladministration.model.LPDRiskSignal;
-import com.abnamro.crms.lpdrisksignaladministration.service.LPDControlService;
-import com.abnamro.crms.lpdrisksignaladministration.utility.LPDRiskSignalUtility;
-import com.abnamro.crms.lpdrisksignaladministration.utility.LPDRiskSignalValidationUtility;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
-import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
-import javax.naming.NamingException;
-import java.util.ArrayList;
-import java.util.List;
+
+import static org.junit.jupiter.api.Assertions.*;
 
 @ExtendWith(MockitoExtension.class)
-class LPDRiskSignalServiceIntlImplTest {
+class CreditFacilityRMTypeTest {
 
     @InjectMocks
-    private LPDRiskSignalServiceIntlImpl service;
-
-    @Mock
-    private LPDControlService lpdControlService;
-
-    @Mock
-    private LPDRiskSignalServiceDao lpdRiskSignalServiceDao;
-
-    @Mock
-    private CreditFacilityDao creditFacilityDao;
-
-    @Mock
-    private CreditRiskMonitoringEventDao creditRiskMonitoringIntlEventDao;
-
-    @Mock
-    private LPDRiskSignalUtility lpdRiskSignalUtility;
-
-    @Mock
-    private LPDRiskSignalValidationUtility lpdRiskSignalValidationUtility;
-
-    private List<CreditFacilityDTO> creditFacilityList;
-    private List<CurrentAccountDTO> currentAccountsList;
+    private CreditFacilityRMType creditFacilityRMType;
 
     @BeforeEach
     void setUp() {
-        creditFacilityList = new ArrayList<>();
-        currentAccountsList = new ArrayList<>();
+        creditFacilityRMType = new CreditFacilityRMType();
+        creditFacilityRMType.setCreditFacilityRMTypeId(1L);
+        creditFacilityRMType.setFacilityId("FAC123");
+        creditFacilityRMType.setRiskManagementType("TypeA");
     }
 
     @Test
-    void testSaveLPDRiskSignalIntl_NoCFEntity() throws LPDException, InterruptedException, NamingException {
-        // Mocking empty filtered CF list scenario
-        when(lpdRiskSignalUtility.filterCreditFacilityList(any())).thenReturn(new ArrayList<>());
-        
-        // Act
-        service.saveLPDRiskSignalIntl(creditFacilityList, currentAccountsList, "TestMessage");
-
-        // Verify that an error log is called when CF entities are empty
-        verify(lpdControlService).logLPDControlError(eq("TestMessage"), eq(LPDControlConstants.NO_CF_ENTITY));
+    void testGetCreditFacilityRMTypeId() {
+        assertEquals(1L, creditFacilityRMType.getCreditFacilityRMTypeId());
     }
 
     @Test
-    void testSaveLPDRiskSignalIntl_ValidCFEntities() throws LPDException, InterruptedException, NamingException {
-        // Mock valid CF list with one entry
-        CreditFacilityDTO creditFacility = new CreditFacilityDTO();
-        creditFacilityList.add(creditFacility);
-        List<CreditFacilityDTO> filteredList = new ArrayList<>();
-        filteredList.add(creditFacility);
-
-        when(lpdRiskSignalUtility.filterCreditFacilityList(any())).thenReturn(filteredList);
-        when(lpdRiskSignalValidationUtility.requestValidation(any())).thenReturn(0);
-
-        // Act
-        service.saveLPDRiskSignalIntl(creditFacilityList, currentAccountsList, "TestMessage");
-
-        // Verify that the helper methods and utility calls are executed
-        verify(lpdRiskSignalValidationUtility).requestValidation(eq(creditFacility));
+    void testSetCreditFacilityRMTypeId() {
+        creditFacilityRMType.setCreditFacilityRMTypeId(2L);
+        assertEquals(2L, creditFacilityRMType.getCreditFacilityRMTypeId());
     }
 
     @Test
-    void testSendIntlEventMessageToRSD() {
-        // Setting up the event hash set and mock CreditRiskMonitoringEvent
-        LPDRiskSignalServiceIntlImpl.eventIntlHashSet.add(new LPDEvent("subjectId", "subjectContext", "eventCode"));
-        when(creditRiskMonitoringIntlEventDao.save(any(CreditRiskMonitoringEvent.class))).thenReturn(new CreditRiskMonitoringEvent());
-
-        // Act
-        service.sendIntlEventMessageToRSD();
-
-        // Verify that the event is saved and message is sent to MQ
-        verify(creditRiskMonitoringIntlEventDao, atLeastOnce()).save(any(CreditRiskMonitoringEvent.class));
-        verify(lpdRiskSignalUtility, atLeastOnce()).sendEventToMQ(any(CreditRiskMonitoringEvent.class), any());
+    void testGetFacilityId() {
+        assertEquals("FAC123", creditFacilityRMType.getFacilityId());
     }
 
     @Test
-    void testPersistLPDRiskSignalIntl_WithExistingRecord() throws LPDException, InterruptedException, NamingException {
-        // Mock data and method returns
-        CreditFacilityDTO creditFacilityDTO = new CreditFacilityDTO();
-        creditFacilityDTO.setOriginalLifetimePD(BigDecimal.valueOf(0.123456789));
-        creditFacilityDTO.setResidualLifetimePD(BigDecimal.valueOf(0.987654321));
-        LPDRiskSignal lpdRiskSignal = new LPDRiskSignal();
-        
-        when(creditFacilityDao.getCreditFacilityIdCount(anyString(), eq(LPDRiskSignalConstants.ADMINISTRATION_STATUS_ACTIVE)))
-                .thenReturn(1);
-        when(lpdRiskSignalServiceDao.getLPDRiskSignalByGlobalFacilityId(anyString()))
-                .thenReturn(Optional.of(lpdRiskSignal));
-        
-        // Act
-        service.persistLPDRiskSignalIntl(creditFacilityDTO, 1, "globalFacilityId", 1);
-
-        // Verify database update interactions
-        verify(lpdRiskSignalServiceDao).saveLPDRiskSignal(any(LPDRiskSignal.class));
+    void testSetFacilityId() {
+        creditFacilityRMType.setFacilityId("FAC456");
+        assertEquals("FAC456", creditFacilityRMType.getFacilityId());
     }
 
     @Test
-    void testPersistLPDRiskSignalIntl_NoExistingRecord() throws LPDException, InterruptedException, NamingException {
-        // Mock data and method returns
-        CreditFacilityDTO creditFacilityDTO = new CreditFacilityDTO();
-        when(creditFacilityDao.getCreditFacilityIdCount(anyString(), eq(LPDRiskSignalConstants.ADMINISTRATION_STATUS_ACTIVE)))
-                .thenReturn(0);
+    void testGetRiskManagementType() {
+        assertEquals("TypeA", creditFacilityRMType.getRiskManagementType());
+    }
 
-        // Act
-        service.persistLPDRiskSignalIntl(creditFacilityDTO, 0, "globalFacilityId", 1);
-
-        // Verify no interaction with saving existing record
-        verify(lpdRiskSignalServiceDao, times(0)).saveLPDRiskSignal(any(LPDRiskSignal.class));
+    @Test
+    void testSetRiskManagementType() {
+        creditFacilityRMType.setRiskManagementType("TypeB");
+        assertEquals("TypeB", creditFacilityRMType.getRiskManagementType());
     }
 }
-
-Explanation
-
-Mocks: All dependencies of LPDRiskSignalServiceIntlImpl are mocked using @Mock.
-
-saveLPDRiskSignalIntl Tests:
-
-Tests behavior when the creditFacilityList has no CF entities.
-
-Tests behavior with valid CF entities, verifying validation and further processing.
-
-
-sendIntlEventMessageToRSD Test:
-
-Verifies that the correct data is saved and messages are sent.
-
-
-persistLPDRiskSignalIntl Tests:
-
-Tests cases where an existing record exists and where no record exists, verifying that saving or updating behavior happens correctly based on conditions.
-
-
-
-This should help ensure that key methods are covered, and the interactions with dependencies are tested.
-
