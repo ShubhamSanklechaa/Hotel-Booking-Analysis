@@ -1,4 +1,8 @@
-To achieve 100% code coverage for the LPDMessageForSignalUtil class, including the ServiceBus part, you’ll need to mock dependencies like ServiceBusSenderClient, LPDTriggerMessageSenderUtil, and CreditFacilityRMTypeDao using Mockito. Additionally, set up assertions to verify that each step behaves as expected. Here’s a JUnit 5 test class that covers all lines, including handling the message sending part.
+To ensure 100% code coverage, we need to test each branch and handle any complex dependencies. In your case, ensuring the ServiceBusSenderClient mock behaves as expected and verifying all key branches (such as if statements) should provide full coverage.
+
+Here’s an improved version of the test code that covers each branch, including the condition where the facility is of type NPL and the scenario where it isn’t. Additionally, it checks message generation and sending.
+
+Revised Test Class
 
 package com.abnamro.crms.lpdrisksignaladministration.utility;
 
@@ -61,27 +65,27 @@ public class LPDMessageForSignalUtilTest {
         newRiskSignal.setOriginalLifetimePD(BigDecimal.valueOf(0.5));
         newRiskSignal.setResidualLifetimePD(BigDecimal.valueOf(0.3));
         newRiskSignal.setAdministrationStatus("Active");
-        newRiskSignal.setLpdVersion("1.0");
+        newRiskSignal.setLpdVersion(1); // Use Integer as required
     }
 
     @Test
-    void testGenerateJsonForSignalMessage() throws JsonProcessingException, LPDException, InterruptedException {
-        // Set up mocks
-        when(creditFacilityRMTypeDao.existsByFacilityIdAndRiskManagementType(any(), eq(LPDRiskSignalConstants.NPL)))
+    void testGenerateJsonForSignalMessage_WithNPL() throws JsonProcessingException, LPDException, InterruptedException {
+        // Set up mocks for NPL condition
+        when(creditFacilityRMTypeDao.existsByFacilityIdAndRiskManagementType(newRiskSignal.getSubjectId(), LPDRiskSignalConstants.NPL))
             .thenReturn(true);
         doNothing().when(senderClient).sendMessage(any(ServiceBusMessage.class));
 
         // Call the method and assert that no exceptions are thrown
         assertDoesNotThrow(() -> lpdMessageForSignalUtil.generateJsonForSignalMessage(newRiskSignal, oldRiskSignal));
 
-        // Verify interactions
+        // Verify that the necessary methods were called
         verify(creditFacilityRMTypeDao, times(1))
             .existsByFacilityIdAndRiskManagementType(newRiskSignal.getSubjectId(), LPDRiskSignalConstants.NPL);
         verify(senderClient, times(1)).sendMessage(any(ServiceBusMessage.class));
     }
 
     @Test
-    void testGenerateJsonForSignalMessage_NoTriggerGeneratedForNonNPL() throws JsonProcessingException, LPDException, InterruptedException {
+    void testGenerateJsonForSignalMessage_NonNPL() throws JsonProcessingException, LPDException, InterruptedException {
         // Mock to return false for NPL check
         when(creditFacilityRMTypeDao.existsByFacilityIdAndRiskManagementType(any(), eq(LPDRiskSignalConstants.NPL)))
             .thenReturn(false);
@@ -92,30 +96,51 @@ public class LPDMessageForSignalUtilTest {
         // Verify that no message was sent
         verify(senderClient, never()).sendMessage(any(ServiceBusMessage.class));
     }
+
+    @Test
+    void testGenerateJsonForSignalMessage_DeteriorationFlagUnchanged() throws JsonProcessingException, LPDException, InterruptedException {
+        // Mock unchanged deterioration flag
+        oldRiskSignal.setDetrorationFlag("Y");
+        newRiskSignal.setDetrorationFlag("Y");
+
+        // Call the method and assert that no exceptions are thrown
+        assertDoesNotThrow(() -> lpdMessageForSignalUtil.generateJsonForSignalMessage(newRiskSignal, oldRiskSignal));
+
+        // Verify no message is sent if the flag hasn’t changed
+        verify(senderClient, never()).sendMessage(any(ServiceBusMessage.class));
+    }
+
+    @Test
+    void testGenerateJsonForSignalMessage_ExceptionHandling() throws JsonProcessingException, InterruptedException {
+        // Simulate an exception during message sending
+        when(creditFacilityRMTypeDao.existsByFacilityIdAndRiskManagementType(any(), eq(LPDRiskSignalConstants.NPL)))
+            .thenReturn(true);
+        doThrow(new RuntimeException("ServiceBus error")).when(senderClient).sendMessage(any(ServiceBusMessage.class));
+
+        // Call the method and ensure the exception is handled gracefully
+        assertDoesNotThrow(() -> lpdMessageForSignalUtil.generateJsonForSignalMessage(newRiskSignal, oldRiskSignal));
+
+        // Verify the NPL check and the attempt to send the message
+        verify(creditFacilityRMTypeDao, times(1))
+            .existsByFacilityIdAndRiskManagementType(newRiskSignal.getSubjectId(), LPDRiskSignalConstants.NPL);
+        verify(senderClient, times(1)).sendMessage(any(ServiceBusMessage.class));
+    }
 }
 
-Explanation:
+Explanation of Additional Tests:
 
-1. Mocks Initialization: Dependencies (ServiceBusSenderClient, CreditFacilityRMTypeDao, and LPDTriggerMessageSenderUtil) are mocked.
-
-
-2. Setup Test Data: Both oldRiskSignal and newRiskSignal are initialized with necessary values.
+1. testGenerateJsonForSignalMessage_WithNPL: Verifies the message is sent for NPL facilities with a changed deterioration flag.
 
 
-3. Testing Message Sending:
-
-The first test verifies that the message is generated and sent when the NPL check passes.
-
-Mocking existsByFacilityIdAndRiskManagementType to return true ensures ServiceBusSenderClient.sendMessage() is called.
+2. testGenerateJsonForSignalMessage_NonNPL: Ensures no message is sent for non-NPL facilities.
 
 
+3. testGenerateJsonForSignalMessage_DeteriorationFlagUnchanged: Verifies no message is sent if the deterioration flag remains unchanged.
 
-4. Testing Non-NPL Scenario:
 
-The second test sets existsByFacilityIdAndRiskManagementType to false, verifying that the message is not sent for non-NPL types.
+4. testGenerateJsonForSignalMessage_ExceptionHandling: Simulates an exception during message sending to ensure it’s handled gracefully, improving robustness.
 
 
 
-
-With this setup, you should achieve 100% coverage and ensure each part, including ServiceBus, is tested.
+With these additional tests, you should achieve 100% code coverage and cover all critical paths in LPDMessageForSignalUtil. Let me know if you face any other issues.
 
