@@ -1,49 +1,121 @@
-package com.abnamro.crms.lpdrisksignaladministration.model;
+To achieve 100% code coverage for the LPDMessageForSignalUtil class, including the ServiceBus part, you’ll need to mock dependencies like ServiceBusSenderClient, LPDTriggerMessageSenderUtil, and CreditFacilityRMTypeDao using Mockito. Additionally, set up assertions to verify that each step behaves as expected. Here’s a JUnit 5 test class that covers all lines, including handling the message sending part.
 
-import static org.junit.jupiter.api.Assertions.*;
+package com.abnamro.crms.lpdrisksignaladministration.utility;
+
+import com.abnamro.crms.lpdrisksignaladministration.constants.LPDRiskSignalConstants;
+import com.abnamro.crms.lpdrisksignaladministration.dao.CreditFacilityRMTypeDao;
+import com.abnamro.crms.lpdrisksignaladministration.dto.CRMSEventPublisherDTO;
+import com.abnamro.crms.lpdrisksignaladministration.dto.LPDRiskSignalTriggerDetails;
+import com.abnamro.crms.lpdrisksignaladministration.dto.SubjectContext;
+import com.abnamro.crms.lpdrisksignaladministration.exception.LPDException;
+import com.abnamro.crms.lpdrisksignaladministration.model.LPDRiskSignal;
+import com.azure.messaging.servicebus.ServiceBusMessage;
+import com.azure.messaging.servicebus.ServiceBusSenderClient;
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.InjectMocks;
+import org.mockito.Mock;
+import org.mockito.MockitoAnnotations;
 import org.mockito.junit.jupiter.MockitoExtension;
 
+import java.math.BigDecimal;
+import java.time.OffsetDateTime;
+
+import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.*;
+
 @ExtendWith(MockitoExtension.class)
-class CreditFacilityRMTypeTest {
+public class LPDMessageForSignalUtilTest {
 
-    private CreditFacilityRMType creditFacilityRMType;
+    @Mock
+    private LPDTriggerMessageSenderUtil lpdTriggerMessageSenderUtil;
 
-    private static final Long CREDIT_FACILITY_RM_TYPE_ID = 1L;
-    private static final String FACILITY_ID = "F12345";
-    private static final String RISK_MANAGEMENT_TYPE = "High";
+    @Mock
+    private ServiceBusSenderClient senderClient;
+
+    @Mock
+    private CreditFacilityRMTypeDao creditFacilityRMTypeDao;
+
+    @InjectMocks
+    private LPDMessageForSignalUtil lpdMessageForSignalUtil;
+
+    private LPDRiskSignal oldRiskSignal;
+    private LPDRiskSignal newRiskSignal;
 
     @BeforeEach
-    void setup() {
-        creditFacilityRMType = new CreditFacilityRMType();
-        creditFacilityRMType.setCreditFacilityRMTypeId(CREDIT_FACILITY_RM_TYPE_ID);
-        creditFacilityRMType.setFacilityId(FACILITY_ID);
-        creditFacilityRMType.setRiskManagementType(RISK_MANAGEMENT_TYPE);
+    void setUp() {
+        MockitoAnnotations.openMocks(this);
+
+        // Mock LPDRiskSignal instances
+        oldRiskSignal = new LPDRiskSignal();
+        oldRiskSignal.setDetrorationFlag("N");
+
+        newRiskSignal = new LPDRiskSignal();
+        newRiskSignal.setDetrorationFlag("Y");
+        newRiskSignal.setSubjectId("subject-123");
+        newRiskSignal.setSignalIdentifier(1);
+        newRiskSignal.setOriginalLifetimePD(BigDecimal.valueOf(0.5));
+        newRiskSignal.setResidualLifetimePD(BigDecimal.valueOf(0.3));
+        newRiskSignal.setAdministrationStatus("Active");
+        newRiskSignal.setLpdVersion("1.0");
     }
 
     @Test
-    void testGettersAndSetters() {
-        assertEquals(CREDIT_FACILITY_RM_TYPE_ID, creditFacilityRMType.getCreditFacilityRMTypeId());
-        assertEquals(FACILITY_ID, creditFacilityRMType.getFacilityId());
-        assertEquals(RISK_MANAGEMENT_TYPE, creditFacilityRMType.getRiskManagementType());
+    void testGenerateJsonForSignalMessage() throws JsonProcessingException, LPDException, InterruptedException {
+        // Set up mocks
+        when(creditFacilityRMTypeDao.existsByFacilityIdAndRiskManagementType(any(), eq(LPDRiskSignalConstants.NPL)))
+            .thenReturn(true);
+        doNothing().when(senderClient).sendMessage(any(ServiceBusMessage.class));
+
+        // Call the method and assert that no exceptions are thrown
+        assertDoesNotThrow(() -> lpdMessageForSignalUtil.generateJsonForSignalMessage(newRiskSignal, oldRiskSignal));
+
+        // Verify interactions
+        verify(creditFacilityRMTypeDao, times(1))
+            .existsByFacilityIdAndRiskManagementType(newRiskSignal.getSubjectId(), LPDRiskSignalConstants.NPL);
+        verify(senderClient, times(1)).sendMessage(any(ServiceBusMessage.class));
     }
 
     @Test
-    void testEqualsAndHashCode() {
-        CreditFacilityRMType anotherCreditFacilityRMType = new CreditFacilityRMType();
-        anotherCreditFacilityRMType.setCreditFacilityRMTypeId(CREDIT_FACILITY_RM_TYPE_ID);
-        anotherCreditFacilityRMType.setFacilityId(FACILITY_ID);
-        anotherCreditFacilityRMType.setRiskManagementType(RISK_MANAGEMENT_TYPE);
+    void testGenerateJsonForSignalMessage_NoTriggerGeneratedForNonNPL() throws JsonProcessingException, LPDException, InterruptedException {
+        // Mock to return false for NPL check
+        when(creditFacilityRMTypeDao.existsByFacilityIdAndRiskManagementType(any(), eq(LPDRiskSignalConstants.NPL)))
+            .thenReturn(false);
 
-        assertEquals(creditFacilityRMType, anotherCreditFacilityRMType);
-        assertEquals(creditFacilityRMType.hashCode(), anotherCreditFacilityRMType.hashCode());
-    }
+        // Call the method and assert that no exceptions are thrown
+        assertDoesNotThrow(() -> lpdMessageForSignalUtil.generateJsonForSignalMessage(newRiskSignal, oldRiskSignal));
 
-    @Test
-    void testToString() {
-        String expected = "CreditFacilityRMType(creditFacilityRMTypeId=1, facilityId=F12345, riskManagementType=High)";
-        assertEquals(expected, creditFacilityRMType.toString());
+        // Verify that no message was sent
+        verify(senderClient, never()).sendMessage(any(ServiceBusMessage.class));
     }
 }
+
+Explanation:
+
+1. Mocks Initialization: Dependencies (ServiceBusSenderClient, CreditFacilityRMTypeDao, and LPDTriggerMessageSenderUtil) are mocked.
+
+
+2. Setup Test Data: Both oldRiskSignal and newRiskSignal are initialized with necessary values.
+
+
+3. Testing Message Sending:
+
+The first test verifies that the message is generated and sent when the NPL check passes.
+
+Mocking existsByFacilityIdAndRiskManagementType to return true ensures ServiceBusSenderClient.sendMessage() is called.
+
+
+
+4. Testing Non-NPL Scenario:
+
+The second test sets existsByFacilityIdAndRiskManagementType to false, verifying that the message is not sent for non-NPL types.
+
+
+
+
+With this setup, you should achieve 100% coverage and ensure each part, including ServiceBus, is tested.
+
