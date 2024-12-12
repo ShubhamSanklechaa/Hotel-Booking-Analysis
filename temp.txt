@@ -1,146 +1,153 @@
-To ensure 100% code coverage, we need to test each branch and handle any complex dependencies. In your case, ensuring the ServiceBusSenderClient mock behaves as expected and verifying all key branches (such as if statements) should provide full coverage.
+To resolve the issue of outdated dependencies causing violations in the IQ server, you need to explicitly override the xstream and commons-io dependency versions in your pom.xml. Below is the updated version of your pom.xml with the required changes, including highlights of the modifications made:
 
-Here’s an improved version of the test code that covers each branch, including the condition where the facility is of type NPL and the scenario where it isn’t. Additionally, it checks message generation and sending.
+Updated pom.xml
 
-Revised Test Class
+<?xml version="1.0"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+    <modelVersion>4.0.0</modelVersion>
 
-package com.abnamro.crms.lpdrisksignaladministration.utility;
+    <parent>
+        <groupId>com.abnamro.crms</groupId>
+        <artifactId>creditrisksignallingintl</artifactId>
+        <version>${revision}</version>
+    </parent>
 
-import com.abnamro.crms.lpdrisksignaladministration.constants.LPDRiskSignalConstants;
-import com.abnamro.crms.lpdrisksignaladministration.dao.CreditFacilityRMTypeDao;
-import com.abnamro.crms.lpdrisksignaladministration.dto.CRMSEventPublisherDTO;
-import com.abnamro.crms.lpdrisksignaladministration.dto.LPDRiskSignalTriggerDetails;
-import com.abnamro.crms.lpdrisksignaladministration.dto.SubjectContext;
-import com.abnamro.crms.lpdrisksignaladministration.exception.LPDException;
-import com.abnamro.crms.lpdrisksignaladministration.model.LPDRiskSignal;
-import com.azure.messaging.servicebus.ServiceBusMessage;
-import com.azure.messaging.servicebus.ServiceBusSenderClient;
-import com.fasterxml.jackson.core.JsonProcessingException;
-import com.fasterxml.jackson.databind.ObjectMapper;
-import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.extension.ExtendWith;
-import org.mockito.InjectMocks;
-import org.mockito.Mock;
-import org.mockito.MockitoAnnotations;
-import org.mockito.junit.jupiter.MockitoExtension;
+    <artifactId>creditrisksignallingintl-batch</artifactId>
+    <packaging>jar</packaging>
+    <name>creditrisksignallingintl-batch</name>
 
-import java.math.BigDecimal;
-import java.time.OffsetDateTime;
+    <properties>
+        <drools.version>7.73.0.Final</drools.version>
+        <!-- Highlight: Added properties for new versions -->
+        <commons-io.version>2.15.0</commons-io.version>
+        <xstream.version>1.4.21</xstream.version>
+    </properties>
 
-import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
-import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.Mockito.*;
+    <dependencies>
+        <!-- Import dependency management from Spring Boot -->
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-dependencies</artifactId>
+            <version>${springframework.boot.version}</version>
+            <type>pom</type>
+            <scope>import</scope>
+        </dependency>
 
-@ExtendWith(MockitoExtension.class)
-public class LPDMessageForSignalUtilTest {
+        <!-- Drools dependency with version updates -->
+        <dependency>
+            <groupId>org.drools</groupId>
+            <artifactId>drools-mvel</artifactId>
+            <version>${drools.version}</version>
+            <exclusions>
+                <!-- Highlight: Excluded old commons-io and xstream -->
+                <exclusion>
+                    <groupId>commons-io</groupId>
+                    <artifactId>commons-io</artifactId>
+                </exclusion>
+                <exclusion>
+                    <groupId>com.thoughtworks.xstream</groupId>
+                    <artifactId>xstream</artifactId>
+                </exclusion>
+            </exclusions>
+        </dependency>
 
-    @Mock
-    private LPDTriggerMessageSenderUtil lpdTriggerMessageSenderUtil;
+        <!-- Added new explicit dependencies -->
+        <dependency>
+            <groupId>commons-io</groupId>
+            <artifactId>commons-io</artifactId>
+            <version>${commons-io.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>com.thoughtworks.xstream</groupId>
+            <artifactId>xstream</artifactId>
+            <version>${xstream.version}</version>
+        </dependency>
 
-    @Mock
-    private ServiceBusSenderClient senderClient;
+        <!-- JUnit for testing -->
+        <dependency>
+            <groupId>junit</groupId>
+            <artifactId>junit</artifactId>
+            <scope>test</scope>
+        </dependency>
+    </dependencies>
 
-    @Mock
-    private CreditFacilityRMTypeDao creditFacilityRMTypeDao;
+    <build>
+        <plugins>
+            <plugin>
+                <groupId>org.springframework.boot</groupId>
+                <artifactId>spring-boot-maven-plugin</artifactId>
+                <executions>
+                    <execution>
+                        <goals>
+                            <goal>repackage</goal>
+                        </goals>
+                    </execution>
+                </executions>
+                <configuration>
+                    <finalName>${project.parent.artifactId}</finalName>
+                </configuration>
+            </plugin>
+        </plugins>
+        <resources>
+            <resource>
+                <directory>src/main/script</directory>
+                <includes>
+                    <include>**/*.sh</include>
+                    <include>**/*.json</include>
+                </includes>
+            </resource>
+            <resource>
+                <directory>src/main/resources</directory>
+                <includes>
+                    <include>META-INF/*.xml</include>
+                    <include>**/*.properties</include>
+                    <include>**/*.xml</include>
+                    <include>/rule/*.drl</include>
+                </includes>
+            </resource>
+        </resources>
+    </build>
+</project>
 
-    @InjectMocks
-    private LPDMessageForSignalUtil lpdMessageForSignalUtil;
+Highlights of Changes
 
-    private LPDRiskSignal oldRiskSignal;
-    private LPDRiskSignal newRiskSignal;
+1. Added Properties for Version Management:
 
-    @BeforeEach
-    void setUp() {
-        MockitoAnnotations.openMocks(this);
+<commons-io.version>2.15.0</commons-io.version>
 
-        // Mock LPDRiskSignal instances
-        oldRiskSignal = new LPDRiskSignal();
-        oldRiskSignal.setDetrorationFlag("N");
-
-        newRiskSignal = new LPDRiskSignal();
-        newRiskSignal.setDetrorationFlag("Y");
-        newRiskSignal.setSubjectId("subject-123");
-        newRiskSignal.setSignalIdentifier(1);
-        newRiskSignal.setOriginalLifetimePD(BigDecimal.valueOf(0.5));
-        newRiskSignal.setResidualLifetimePD(BigDecimal.valueOf(0.3));
-        newRiskSignal.setAdministrationStatus("Active");
-        newRiskSignal.setLpdVersion(1); // Use Integer as required
-    }
-
-    @Test
-    void testGenerateJsonForSignalMessage_WithNPL() throws JsonProcessingException, LPDException, InterruptedException {
-        // Set up mocks for NPL condition
-        when(creditFacilityRMTypeDao.existsByFacilityIdAndRiskManagementType(newRiskSignal.getSubjectId(), LPDRiskSignalConstants.NPL))
-            .thenReturn(true);
-        doNothing().when(senderClient).sendMessage(any(ServiceBusMessage.class));
-
-        // Call the method and assert that no exceptions are thrown
-        assertDoesNotThrow(() -> lpdMessageForSignalUtil.generateJsonForSignalMessage(newRiskSignal, oldRiskSignal));
-
-        // Verify that the necessary methods were called
-        verify(creditFacilityRMTypeDao, times(1))
-            .existsByFacilityIdAndRiskManagementType(newRiskSignal.getSubjectId(), LPDRiskSignalConstants.NPL);
-        verify(senderClient, times(1)).sendMessage(any(ServiceBusMessage.class));
-    }
-
-    @Test
-    void testGenerateJsonForSignalMessage_NonNPL() throws JsonProcessingException, LPDException, InterruptedException {
-        // Mock to return false for NPL check
-        when(creditFacilityRMTypeDao.existsByFacilityIdAndRiskManagementType(any(), eq(LPDRiskSignalConstants.NPL)))
-            .thenReturn(false);
-
-        // Call the method and assert that no exceptions are thrown
-        assertDoesNotThrow(() -> lpdMessageForSignalUtil.generateJsonForSignalMessage(newRiskSignal, oldRiskSignal));
-
-        // Verify that no message was sent
-        verify(senderClient, never()).sendMessage(any(ServiceBusMessage.class));
-    }
-
-    @Test
-    void testGenerateJsonForSignalMessage_DeteriorationFlagUnchanged() throws JsonProcessingException, LPDException, InterruptedException {
-        // Mock unchanged deterioration flag
-        oldRiskSignal.setDetrorationFlag("Y");
-        newRiskSignal.setDetrorationFlag("Y");
-
-        // Call the method and assert that no exceptions are thrown
-        assertDoesNotThrow(() -> lpdMessageForSignalUtil.generateJsonForSignalMessage(newRiskSignal, oldRiskSignal));
-
-        // Verify no message is sent if the flag hasn’t changed
-        verify(senderClient, never()).sendMessage(any(ServiceBusMessage.class));
-    }
-
-    @Test
-    void testGenerateJsonForSignalMessage_ExceptionHandling() throws JsonProcessingException, InterruptedException {
-        // Simulate an exception during message sending
-        when(creditFacilityRMTypeDao.existsByFacilityIdAndRiskManagementType(any(), eq(LPDRiskSignalConstants.NPL)))
-            .thenReturn(true);
-        doThrow(new RuntimeException("ServiceBus error")).when(senderClient).sendMessage(any(ServiceBusMessage.class));
-
-        // Call the method and ensure the exception is handled gracefully
-        assertDoesNotThrow(() -> lpdMessageForSignalUtil.generateJsonForSignalMessage(newRiskSignal, oldRiskSignal));
-
-        // Verify the NPL check and the attempt to send the message
-        verify(creditFacilityRMTypeDao, times(1))
-            .existsByFacilityIdAndRiskManagementType(newRiskSignal.getSubjectId(), LPDRiskSignalConstants.NPL);
-        verify(senderClient, times(1)).sendMessage(any(ServiceBusMessage.class));
-    }
-}
-
-Explanation of Additional Tests:
-
-1. testGenerateJsonForSignalMessage_WithNPL: Verifies the message is sent for NPL facilities with a changed deterioration flag.
-
-
-2. testGenerateJsonForSignalMessage_NonNPL: Ensures no message is sent for non-NPL facilities.
-
-
-3. testGenerateJsonForSignalMessage_DeteriorationFlagUnchanged: Verifies no message is sent if the deterioration flag remains unchanged.
-
-
-4. testGenerateJsonForSignalMessage_ExceptionHandling: Simulates an exception during message sending to ensure it’s handled gracefully, improving robustness.
+<xstream.version>1.4.21</xstream.version>
 
 
 
-With these additional tests, you should achieve 100% code coverage and cover all critical paths in LPDMessageForSignalUtil. Let me know if you face any other issues.
+2. Updated Exclusions in drools-mvel:
+
+Excluded old versions of commons-io and xstream.
+
+
+
+3. Added Explicit Dependencies:
+
+Added commons-io and xstream dependencies with the new versions.
+
+
+
+4. General Formatting Fixes:
+
+Improved XML structure for better readability and completeness.
+
+
+
+
+Next Steps
+
+Run mvn clean install to verify the build works locally.
+
+Ensure your CI pipeline uses the updated pom.xml.
+
+Commit and push the changes to trigger the CI pipeline. Ensure it passes successfully.
+
+
+Let me know if you encounter any further issues!
 
