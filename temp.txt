@@ -1,7 +1,94 @@
-<properties>
-    <drools.version>7.73.0.Final</drools.version>
-    <commons-io.version>2.15.0</commons-io.version>
-    <xstream.version>1.4.21</xstream.version>
-    <!-- Added for commons-codec -->
-    <commons-codec.version>1.16.0</commons-codec.version> <!-- NEW -->
-</properties>
+@ExtendWith(MockitoExtension.class)
+public class YourClassTest {
+
+    @InjectMocks
+    private YourClass yourClass; // Replace with actual class name containing the method
+
+    @Mock
+    private FeatureFlag featureFlag;
+
+    // Constants
+    private static final String FEATURE_CODE = "SFO123";
+    private static final String FEATURE_DESC = "Some Description";
+
+    @BeforeEach
+    void setUp() {
+        // setup if needed
+    }
+
+    @Test
+    void testSetScmProductPresenceDetails_vmmt_scenario() {
+        // Arrange
+        SelectedFeatures selectedFeature = Mockito.mock(SelectedFeatures.class);
+        Mockito.when(selectedFeature.getFeatureCode()).thenReturn(FEATURE_CODE);
+        Mockito.when(selectedFeature.getDescription()).thenReturn(FEATURE_DESC);
+
+        List<SelectedFeatures> selectedFeaturesList = List.of(selectedFeature);
+        LineInfo lineInfo = new LineInfo();
+
+        // Make feature flag enabled
+        Mockito.when(featureFlag.isFeatureFlagEnabled(
+                FeatureFlagConstants.PLATFORM, 
+                FeatureFlagConstants.VBG_MIGRATION, 
+                FeatureFlagConstants.VMMT_FFLAG
+        )).thenReturn(true);
+
+        // Set up valid SFOs
+        yourClass.validSFOIdForVmmt = List.of(FEATURE_CODE);
+
+        // Act
+        yourClass.setScmProductPresenceDetails(selectedFeaturesList, lineInfo, "vmmt");
+
+        // Assert
+        assertTrue(lineInfo.isVmmtPresent());
+        assertTrue(lineInfo.isScmProductPresent());
+        assertNotNull(lineInfo.getVmmtDetails());
+        assertEquals(1, lineInfo.getVmmtDetails().size());
+        assertEquals(FEATURE_CODE, lineInfo.getVmmtDetails().get(0).getVisFeatureCode());
+        assertEquals(FEATURE_DESC, lineInfo.getVmmtDetails().get(0).getFeatureDesc());
+        assertEquals("add", lineInfo.getVmmtDetails().get(0).getAddDeleteInd());
+        assertEquals("mobility", lineInfo.getVmmtDetails().get(0).getType());
+    }
+
+    @Test
+    void testSetScmProductPresenceDetails_mybizz_scenario() {
+        // Arrange
+        SelectedFeatures selectedFeature = Mockito.mock(SelectedFeatures.class);
+        Mockito.when(selectedFeature.getFeatureCode()).thenReturn(FEATURE_CODE);
+        Mockito.when(selectedFeature.getDescription()).thenReturn(FEATURE_DESC);
+
+        List<SelectedFeatures> selectedFeaturesList = List.of(selectedFeature);
+        LineInfo lineInfo = new LineInfo();
+
+        // Make feature flag enabled
+        Mockito.when(featureFlag.isFeatureFlagEnabled(
+                FeatureFlagConstants.PLATFORM,
+                FeatureFlagConstants.VBG_MIGRATION,
+                FeatureFlagConstants.MYBIZZ_ADDON_FFLAG
+        )).thenReturn(true);
+
+        yourClass.validSFOIdForMyBizzAddon = List.of(FEATURE_CODE);
+
+        // Act
+        yourClass.setScmProductPresenceDetails(selectedFeaturesList, lineInfo, "mybizzadon");
+
+        // Assert
+        assertTrue(lineInfo.isScmProductPresent());
+        assertNotNull(lineInfo.getAddonFeaturesDetails());
+        assertEquals(1, lineInfo.getAddonFeaturesDetails().size());
+        assertEquals(FEATURE_CODE, lineInfo.getAddonFeaturesDetails().get(0).getVisFeatureCode());
+    }
+
+    @Test
+    void testSetScmProductPresenceDetails_nullOrEmptyList_shouldReturnEarly() {
+        // Arrange
+        LineInfo lineInfo = new LineInfo();
+
+        // Act - empty list
+        yourClass.setScmProductPresenceDetails(Collections.emptyList(), lineInfo, "vmmt");
+
+        // No exception thrown, nothing is set
+        assertFalse(lineInfo.isScmProductPresent());
+
+        // Act - null list
+        yourClass.setScmProductPresenceDetails(null, lineInfo,
