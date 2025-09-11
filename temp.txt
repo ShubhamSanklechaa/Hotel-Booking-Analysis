@@ -1,94 +1,47 @@
-@ExtendWith(MockitoExtension.class)
-public class YourClassTest {
+Got it 👍 — thanks for clarifying. You want to keep Trigger Administration changes with Nexus IQ fix as one activity, and Signalling Event Generation script decommissioning as a separate activity (since it belongs to the Signalling batch application). Here’s a clearer and more formal version of your mail:
 
-    @InjectMocks
-    private YourClass yourClass; // Replace with actual class name containing the method
 
-    @Mock
-    private FeatureFlag featureFlag;
+---
 
-    // Constants
-    private static final String FEATURE_CODE = "SFO123";
-    private static final String FEATURE_DESC = "Some Description";
+Subject: Request for Approval – PR Deployment for Credit Risk Trigger Administration & Signalling Batch Script Decommissioning (14th September 2025, 10:30 CET)
 
-    @BeforeEach
-    void setUp() {
-        // setup if needed
-    }
+Hi Neha and Gurdal,
 
-    @Test
-    void testSetScmProductPresenceDetails_vmmt_scenario() {
-        // Arrange
-        SelectedFeatures selectedFeature = Mockito.mock(SelectedFeatures.class);
-        Mockito.when(selectedFeature.getFeatureCode()).thenReturn(FEATURE_CODE);
-        Mockito.when(selectedFeature.getDescription()).thenReturn(FEATURE_DESC);
+We are planning the following production deployment activities on 14th September 2025 at 10:30 CET:
 
-        List<SelectedFeatures> selectedFeaturesList = List.of(selectedFeature);
-        LineInfo lineInfo = new LineInfo();
+1. Credit Risk Trigger Administration
 
-        // Make feature flag enabled
-        Mockito.when(featureFlag.isFeatureFlagEnabled(
-                FeatureFlagConstants.PLATFORM, 
-                FeatureFlagConstants.VBG_MIGRATION, 
-                FeatureFlagConstants.VMMT_FFLAG
-        )).thenReturn(true);
+Decommissioning of the Trigger Administration changes along with the Nexus IQ policy violation fix.
 
-        // Set up valid SFOs
-        yourClass.validSFOIdForVmmt = List.of(FEATURE_CODE);
 
-        // Act
-        yourClass.setScmProductPresenceDetails(selectedFeaturesList, lineInfo, "vmmt");
 
-        // Assert
-        assertTrue(lineInfo.isVmmtPresent());
-        assertTrue(lineInfo.isScmProductPresent());
-        assertNotNull(lineInfo.getVmmtDetails());
-        assertEquals(1, lineInfo.getVmmtDetails().size());
-        assertEquals(FEATURE_CODE, lineInfo.getVmmtDetails().get(0).getVisFeatureCode());
-        assertEquals(FEATURE_DESC, lineInfo.getVmmtDetails().get(0).getFeatureDesc());
-        assertEquals("add", lineInfo.getVmmtDetails().get(0).getAddDeleteInd());
-        assertEquals("mobility", lineInfo.getVmmtDetails().get(0).getType());
-    }
+2. Credit Risk Signalling (Batch Application)
 
-    @Test
-    void testSetScmProductPresenceDetails_mybizz_scenario() {
-        // Arrange
-        SelectedFeatures selectedFeature = Mockito.mock(SelectedFeatures.class);
-        Mockito.when(selectedFeature.getFeatureCode()).thenReturn(FEATURE_CODE);
-        Mockito.when(selectedFeature.getDescription()).thenReturn(FEATURE_DESC);
+Decommissioning of the CreditRiskSignallingEventGeneration.sh script.
 
-        List<SelectedFeatures> selectedFeaturesList = List.of(selectedFeature);
-        LineInfo lineInfo = new LineInfo();
 
-        // Make feature flag enabled
-        Mockito.when(featureFlag.isFeatureFlagEnabled(
-                FeatureFlagConstants.PLATFORM,
-                FeatureFlagConstants.VBG_MIGRATION,
-                FeatureFlagConstants.MYBIZZ_ADDON_FFLAG
-        )).thenReturn(true);
 
-        yourClass.validSFOIdForMyBizzAddon = List.of(FEATURE_CODE);
 
-        // Act
-        yourClass.setScmProductPresenceDetails(selectedFeaturesList, lineInfo, "mybizzadon");
+The application changes for Trigger Administration have been successfully tested end-to-end (E2E) in the Acceptance environment, and the functionality is working as expected. The detailed test results are available in the Confluence page [link/attachment] for your reference.
 
-        // Assert
-        assertTrue(lineInfo.isScmProductPresent());
-        assertNotNull(lineInfo.getAddonFeaturesDetails());
-        assertEquals(1, lineInfo.getAddonFeaturesDetails().size());
-        assertEquals(FEATURE_CODE, lineInfo.getAddonFeaturesDetails().get(0).getVisFeatureCode());
-    }
+Activities Planned for Production Deployment:
 
-    @Test
-    void testSetScmProductPresenceDetails_nullOrEmptyList_shouldReturnEarly() {
-        // Arrange
-        LineInfo lineInfo = new LineInfo();
+Pipeline approval for PR deployment
 
-        // Act - empty list
-        yourClass.setScmProductPresenceDetails(Collections.emptyList(), lineInfo, "vmmt");
+Removal of CreditRiskSignallingEventGeneration.sh script from production
 
-        // No exception thrown, nothing is set
-        assertFalse(lineInfo.isScmProductPresent());
+PR deployment
 
-        // Act - null list
-        yourClass.setScmProductPresenceDetails(null, lineInfo,
+Post-deployment verification
+
+
+We kindly request your approval to proceed with the above activities for production deployment this weekend. Please let us know if you require any further information or clarifications.
+
+Best regards,
+[Your Name]
+
+
+---
+
+Do you also want me to split the activities list into two separate sections (one for Trigger Administration, one for Signalling Batch) so it’s crystal clear which steps belong to which application?
+
