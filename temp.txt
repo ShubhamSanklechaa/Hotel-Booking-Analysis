@@ -1,47 +1,69 @@
-Got it 👍 — thanks for clarifying. You want to keep Trigger Administration changes with Nexus IQ fix as one activity, and Signalling Event Generation script decommissioning as a separate activity (since it belongs to the Signalling batch application). Here’s a clearer and more formal version of your mail:
+--liquibase formatted sql
 
+-- ============================================================
+-- Table: LPDControl
+-- ============================================================
+CREATE TABLE [LPDAdmin].[LPDControl] (
+    [LPDControlIdentifier] numeric(30) NOT NULL,
+    [FacilityAgreementId] varchar(50) NOT NULL,
+    [FacilityAgreementSourceSystemId] varchar(50) NOT NULL,
+    [InputMessage] varchar(max) NULL,
+    [ErrorMessage] varchar(256) NULL,
+    [CreationTimestamp] datetime2(6) NOT NULL,
+    [LastUpdatedTimestamp] datetime2(6) NOT NULL,
+    CONSTRAINT PK_LPDControl PRIMARY KEY ([LPDControlIdentifier])
+);
 
----
+-- ============================================================
+-- Table: LPDRiskSignal
+-- ============================================================
+CREATE TABLE [LPDAdmin].[LPDRiskSignal] (
+    [LPDRiskSignalId] numeric(30) NOT NULL,
+    [FacilityAgreementId] varchar(50) NOT NULL,
+    [FacilityAgreementSourceSystemId] varchar(50) NOT NULL,
+    [FacilityAgreementIdentifier] varchar(50) NOT NULL,
+    [OriginalLifetimeProbabilityOfDefault] numeric(18,8) NULL,
+    [ResidualLifetimeProbabilityOfDefault] numeric(18,8) NULL,
+    [ClientSegmentLevel] varchar(20) NULL,
+    [DeteriorationFlag] char(1) NULL,
+    [LPDCalculationDate] datetime2(6) NOT NULL,
+    [AdministrationStatus] varchar(30) NULL,
+    [CreationTimestamp] datetime2(6) NOT NULL,
+    [LastUpdatedTimestamp] datetime2(6) NOT NULL,
+    [LPDVersion] numeric(30) NULL,
+    [AgreementSourceSystem] varchar(30) NULL,
+    CONSTRAINT PK_LPDRiskSignal PRIMARY KEY ([LPDRiskSignalId])
+);
 
-Subject: Request for Approval – PR Deployment for Credit Risk Trigger Administration & Signalling Batch Script Decommissioning (14th September 2025, 10:30 CET)
+-- ============================================================
+-- Table: LPDRiskSignalArchive
+-- ============================================================
+CREATE TABLE [LPDAdmin].[LPDRiskSignalArchive] (
+    [LPDRiskSignalArchiveId] numeric(30) NOT NULL,
+    [FacilityAgreementId] varchar(50) NOT NULL,
+    [FacilityAgreementSourceSystemId] varchar(50) NOT NULL,
+    [FacilityAgreementIdentifier] varchar(50) NOT NULL,
+    [OriginalLifetimeProbabilityOfDefault] numeric(18,8) NULL,
+    [ResidualLifetimeProbabilityOfDefault] numeric(18,8) NULL,
+    [ClientSegmentLevel] varchar(20) NULL,
+    [DeteriorationFlag] char(1) NULL,
+    [LPDCalculationDate] datetime2(6) NOT NULL,
+    [AdministrationStatus] varchar(30) NULL,
+    [CreationTimestamp] datetime2(6) NOT NULL,
+    [LastUpdatedTimestamp] datetime2(6) NOT NULL,
+    [LPDVersion] numeric(30) NULL,
+    [AuditId] numeric(30) NULL,
+    [LPDRiskSignalId] numeric(30) NOT NULL,
+    CONSTRAINT PK_LPDRiskSignalArchive PRIMARY KEY ([LPDRiskSignalArchiveId]),
+    CONSTRAINT FK_LPDRiskSignalArchive_LPDRiskSignal FOREIGN KEY ([LPDRiskSignalId])
+        REFERENCES [LPDAdmin].[LPDRiskSignal]([LPDRiskSignalId])
+);
 
-Hi Neha and Gurdal,
+-- ============================================================
+-- Indexes
+-- ============================================================
+CREATE NONCLUSTERED INDEX IXFK_LPDRiskSignalArchive_LPDRiskSignal
+ON [LPDAdmin].[LPDRiskSignalArchive] ([LPDRiskSignalId]);
 
-We are planning the following production deployment activities on 14th September 2025 at 10:30 CET:
-
-1. Credit Risk Trigger Administration
-
-Decommissioning of the Trigger Administration changes along with the Nexus IQ policy violation fix.
-
-
-
-2. Credit Risk Signalling (Batch Application)
-
-Decommissioning of the CreditRiskSignallingEventGeneration.sh script.
-
-
-
-
-The application changes for Trigger Administration have been successfully tested end-to-end (E2E) in the Acceptance environment, and the functionality is working as expected. The detailed test results are available in the Confluence page [link/attachment] for your reference.
-
-Activities Planned for Production Deployment:
-
-Pipeline approval for PR deployment
-
-Removal of CreditRiskSignallingEventGeneration.sh script from production
-
-PR deployment
-
-Post-deployment verification
-
-
-We kindly request your approval to proceed with the above activities for production deployment this weekend. Please let us know if you require any further information or clarifications.
-
-Best regards,
-[Your Name]
-
-
----
-
-Do you also want me to split the activities list into two separate sections (one for Trigger Administration, one for Signalling Batch) so it’s crystal clear which steps belong to which application?
-
+CREATE NONCLUSTERED INDEX IXFK_LPDRiskSignalArchive_LPDRiskSignal_02
+ON [LPDAdmin].[LPDRiskSignalArchive] ([LPDRiskSignalId]);
