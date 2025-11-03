@@ -1,69 +1,162 @@
---liquibase formatted sql
+Got it 👍 — here’s your revised textual prompt with all occurrences of “CreditAgreement” replaced by “CreditFacilities”.
 
--- ============================================================
--- Table: LPDControl
--- ============================================================
-CREATE TABLE [LPDAdmin].[LPDControl] (
-    [LPDControlIdentifier] numeric(30) NOT NULL,
-    [FacilityAgreementId] varchar(50) NOT NULL,
-    [FacilityAgreementSourceSystemId] varchar(50) NOT NULL,
-    [InputMessage] varchar(max) NULL,
-    [ErrorMessage] varchar(256) NULL,
-    [CreationTimestamp] datetime2(6) NOT NULL,
-    [LastUpdatedTimestamp] datetime2(6) NOT NULL,
-    CONSTRAINT PK_LPDControl PRIMARY KEY ([LPDControlIdentifier])
-);
 
--- ============================================================
--- Table: LPDRiskSignal
--- ============================================================
-CREATE TABLE [LPDAdmin].[LPDRiskSignal] (
-    [LPDRiskSignalId] numeric(30) NOT NULL,
-    [FacilityAgreementId] varchar(50) NOT NULL,
-    [FacilityAgreementSourceSystemId] varchar(50) NOT NULL,
-    [FacilityAgreementIdentifier] varchar(50) NOT NULL,
-    [OriginalLifetimeProbabilityOfDefault] numeric(18,8) NULL,
-    [ResidualLifetimeProbabilityOfDefault] numeric(18,8) NULL,
-    [ClientSegmentLevel] varchar(20) NULL,
-    [DeteriorationFlag] char(1) NULL,
-    [LPDCalculationDate] datetime2(6) NOT NULL,
-    [AdministrationStatus] varchar(30) NULL,
-    [CreationTimestamp] datetime2(6) NOT NULL,
-    [LastUpdatedTimestamp] datetime2(6) NOT NULL,
-    [LPDVersion] numeric(30) NULL,
-    [AgreementSourceSystem] varchar(30) NULL,
-    CONSTRAINT PK_LPDRiskSignal PRIMARY KEY ([LPDRiskSignalId])
-);
+---
 
--- ============================================================
--- Table: LPDRiskSignalArchive
--- ============================================================
-CREATE TABLE [LPDAdmin].[LPDRiskSignalArchive] (
-    [LPDRiskSignalArchiveId] numeric(30) NOT NULL,
-    [FacilityAgreementId] varchar(50) NOT NULL,
-    [FacilityAgreementSourceSystemId] varchar(50) NOT NULL,
-    [FacilityAgreementIdentifier] varchar(50) NOT NULL,
-    [OriginalLifetimeProbabilityOfDefault] numeric(18,8) NULL,
-    [ResidualLifetimeProbabilityOfDefault] numeric(18,8) NULL,
-    [ClientSegmentLevel] varchar(20) NULL,
-    [DeteriorationFlag] char(1) NULL,
-    [LPDCalculationDate] datetime2(6) NOT NULL,
-    [AdministrationStatus] varchar(30) NULL,
-    [CreationTimestamp] datetime2(6) NOT NULL,
-    [LastUpdatedTimestamp] datetime2(6) NOT NULL,
-    [LPDVersion] numeric(30) NULL,
-    [AuditId] numeric(30) NULL,
-    [LPDRiskSignalId] numeric(30) NOT NULL,
-    CONSTRAINT PK_LPDRiskSignalArchive PRIMARY KEY ([LPDRiskSignalArchiveId]),
-    CONSTRAINT FK_LPDRiskSignalArchive_LPDRiskSignal FOREIGN KEY ([LPDRiskSignalId])
-        REFERENCES [LPDAdmin].[LPDRiskSignal]([LPDRiskSignalId])
-);
+🧩 Textual Representation (Updated Prompt)
 
--- ============================================================
--- Indexes
--- ============================================================
-CREATE NONCLUSTERED INDEX IXFK_LPDRiskSignalArchive_LPDRiskSignal
-ON [LPDAdmin].[LPDRiskSignalArchive] ([LPDRiskSignalId]);
+Flow Name:
+LPD Risk Signal Administration — Data Design & Event Generation Flow
 
-CREATE NONCLUSTERED INDEX IXFK_LPDRiskSignalArchive_LPDRiskSignal_02
-ON [LPDAdmin].[LPDRiskSignalArchive] ([LPDRiskSignalId]);
+
+---
+
+1️⃣ Kafka Consumer Layer
+
+Step: Kafka Consumer reads messages from all the subscribed topics.
+
+Action: Passes each message to the Service layer for validation.
+
+
+
+---
+
+2️⃣ Message Validation Layer
+
+Step: Service validates the incoming JSON message.
+
+Condition:
+
+If JSON is invalid → Log error “Invalid JSON format” and read next message.
+
+If JSON is valid → Proceed to entity validation.
+
+
+
+
+---
+
+3️⃣ Entity Validation Layer
+
+Condition: Does the JSON contain a valid CreditFacilities entity?
+
+If No → Log “CreditFacilities entity missing” and read next message.
+
+If Yes → Proceed to check “CF entities.”
+
+
+
+
+---
+
+4️⃣ CF Entities Validation
+
+Check: Does CF entity have a globalFacilityId?
+
+If No → Log “globalFacilityId missing” and read next message.
+
+If Yes →
+
+Check in all other entities where parentFacility = creditFacilityIdentifier of CF entities.
+
+Verify if globalFacilityId is available (non-null) in any of the entities.
+
+If still not found, check for all CurrentAccount entities having a valid globalFacilityId.
+
+If found → proceed.
+
+If not found → Log “globalFacilityId unavailable” and read next message.
+
+
+
+
+
+---
+
+5️⃣ Contract Admin / Credit Facility Mapping
+
+Retrieve globalFacilityId in LPD data map →
+ContractAdmin → CreditFacility → AlternativeAgreement → ValueId.
+
+
+
+---
+
+6️⃣ Alternative Agreement Validation
+
+Condition: Is AlternativeAgreementValueId “EFFECTIVE / ACTIVE”?
+
+If No → Log “FacilityAlternateIdentifier not effective in CRMS” and read next message.
+
+If Yes → Proceed to field-level validations.
+
+
+
+
+---
+
+7️⃣ Mandatory Field Validations
+
+Perform checks for:
+
+originalLifetimePD being null
+
+residualLifetimePD being null
+
+ClientSegmentLevel being null
+
+lpDeteriorationFlag being absent or invalid (not in allowed values Y/N)
+
+
+If any error → Log error and read next message.
+
+If all valid → Proceed to update risk signal.
+
+
+
+---
+
+8️⃣ Insert or Update LPD Risk Signal
+
+Action: Insert or update record in LPDRiskSignal table.
+
+
+
+---
+
+9️⃣ Party Identification & Event Generation
+
+Step:
+
+Call Contract API to identify PartyId using contract details.
+
+Generate event for the identified PartyId.
+
+Send the single found PartyId as output for event generation.
+
+
+
+
+---
+
+🔟 Generate LPD Event
+
+Final Step: Generate the corresponding LPD Event based on validated data and identified party.
+
+
+
+---
+
+⚙️ Error Handling Summary
+
+Whenever a validation fails:
+
+Log the corresponding error message (e.g., Invalid JSON, Missing Entity, Missing Field).
+
+Skip current message and move to the next Kafka record.
+
+
+
+---
+
+Would you like me to now convert this version into a visual Mermaid flowchart or keep it as textual format only?
